@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>選手登録</title>
+  </head>
+  <body>
+    <form method="post" action="{{ url_for('register') }}">
+      <table border="1">
+        <tr>
+          <th>氏名</th>
+          <th>都道府県</th>
+          <th>段級位</th>
+        </tr>
+        <tr>
+          <td><input type="text" name="name" /></td>
+          <td><input type="text" name="prefecture" /></td>
+          <td><input type="text" name="grade" /></td>
+        </tr>
+      </table>
+      <input type="submit" value="登録" />
+    </form>
+  </body>
+</html>

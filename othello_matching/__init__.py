@@ -1,0 +1,12 @@
+from flask import Flask
+from flask_cors import CORS
+app = Flask(__name__)
+CORS(app)
+import othello_matching.main
+
+from othello_matching import db
+db.create_players_table()
+db.create_results_table()
+db.create_game_data_table()
+db.create_new_matches_table()
+db.create_new_game_result_table()
