@@ -47,7 +47,8 @@
             href="{{ url_for('add_game', player1=match.player1, player2=match.player2) }}"
             >結果入力</a
           >
-          {% else %} {{match.winner}}勝利!! {% endif %}
+          {% elif (match.winner == "不戦勝") %} 不戦勝 {% else %}
+          {{match.winner}}勝利!! {% endif %}
         </td>
       </tr>
     </table>

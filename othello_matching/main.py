@@ -3,6 +3,7 @@ from flask import render_template, request, redirect, url_for
 from functools import cmp_to_key
 import sqlite3
 import json
+import random
 DATABASE = 'database.db'
 
 def comp(player1, player2):
@@ -13,7 +14,11 @@ def comp(player1, player2):
     elif score1 < score2:
         return 1
     else:
-        return -1 if player1['stone_diff'] > player2['stone_diff'] else 1
+        if player1['stone_diff'] > player2['stone_diff']:
+            return -1
+        elif player1['stone_diff'] < player2['stone_diff']:
+            return 1
+    return 1 - 2 * random.randint(0, 1)
 
 #トップページ
 @app.route('/')
@@ -108,6 +113,11 @@ def matching():
             break
     
     con = sqlite3.connect(DATABASE)
+    game_data = con.execute("SELECT * FROM game_data").fetchall()
+    round = -1
+    for row in game_data:
+        round = row[0]
+    print(round)
     con.execute("DELETE FROM now_matches")
     for pair in pairs:
         player1 = players[pair[0]]['name']
@@ -116,13 +126,13 @@ def matching():
         print(f'player1: {player1}, player2; {player2}')
     if (no_game_player != -1):
         player1 = players[no_game_player]['name']
-        con.execute("INSERT INTO now_matches VALUES (?, ?)", [player1, "不戦勝"])
+        con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [round, player1, "不戦勝", 2])
+        con.execute("INSERT INTO now_matches VALUES (?, ?, ?)", [player1, "-", "不戦勝"])
+        con.execute('UPDATE results SET win = win + 1 WHERE name = ?', [player1])
+        con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [2, player1])
+
+
     con.commit()
-    game_data = con.execute("SELECT * FROM game_data").fetchall()
-    round = -1
-    for row in game_data:
-        round = row[0]
-    print(round)
     con.execute("DELETE FROM game_data")
     con.execute("INSERT INTO game_data VALUES(?, ?)", [round + 1, n // 2])
     con.commit()
