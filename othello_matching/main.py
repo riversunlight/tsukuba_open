@@ -7,8 +7,8 @@ import random
 DATABASE = 'database.db'
 
 def comp(player1, player2):
-    score1 = player1['win'] * 2 + player1['draw']
-    score2 = player2['win'] * 2 + player2['draw']
+    score1 = player1['win']
+    score2 = player2['win']
     if score1 > score2:
         return -1
     elif score1 < score2:
@@ -34,7 +34,7 @@ def index():
     game_data = []
     now_matches = []
     for row in db_player:
-        ranks.append({'name': row[0], 'win': row[1], 'lose': row[2], 'draw': row[3], 'stone_diff': row[4]})
+        ranks.append({'name': row[0], 'win': row[1], 'lose': row[2], 'stone_diff': row[3]})
     ranks = sorted(ranks, key=cmp_to_key(comp))
     for row in _game_data:
         game_data.append({'round': row[0], 'during_game': row[1]})
@@ -71,7 +71,7 @@ def register():
     grade = request.form['grade']
     con = sqlite3.connect(DATABASE)
     con.execute('INSERT INTO players VALUES(?, ?, ?)', [name, prefecture, grade])
-    con.execute('INSERT INTO results VALUES(?, ?, ?, ?, ?)', [name, 0, 0, 0, 0])
+    con.execute('INSERT INTO results VALUES(?, ?, ?, ?)', [name, 0, 0, 0])
     con.commit()
     con.close()
     return redirect(url_for('index'))
@@ -83,7 +83,7 @@ def matching():
     con = sqlite3.connect(DATABASE)
     ranks_data = con.execute('SELECT * FROM results').fetchall()
     for row in ranks_data:
-        players.append({'name': row[0], 'win': row[1], 'lose': row[2], 'draw': row[3], 'stone_diff': row[4]})
+        players.append({'name': row[0], 'win': row[1], 'lose': row[2], 'stone_diff': row[3]})
     
     # 順位順にsort(比較関数作ってやる)
     players = sorted(players, key=cmp_to_key(comp))
@@ -172,6 +172,41 @@ def game_input():
     con.commit()
     con.close()
     return redirect(url_for('index'))
+
+@app.route('/person_result')
+def person_result():
+    name = request.args.get('name')
+
+    # Game result DBから各人の結果を持ってくる
+    con = sqlite3.connect(DATABASE)
+    person_result_data = con.execute('SELECT * FROM game_result WHERE (win_player=? OR lose_player=?)', [name, name]).fetchall()
+    person_results = []
+    print(person_result_data)
+    result_data = con.execute('SELECT * FROM results WHERE name=?', [name]).fetchall()
+    for row in person_result_data:
+        my_id = 1
+        tmp = {}
+        if row[2]==name:
+            my_id = 2
+        tmp["round"] = row[0]
+        tmp["opponent"] = row[((my_id - 1) ^ 1) + 1]
+        tmp["stone"] = row[3]
+        tmp["win"] = "O" if my_id == 1 else "X"
+        person_results.append(tmp)
+    for row in result_data:
+        total_win = row[1]
+        total_lose = row[2]
+        total_stone = row[3]
+    con.close()
+        
+    return render_template(
+        'person_result.html',
+        person_results=person_results,
+        name=name,
+        win=total_win,
+        lose=total_lose,
+        stone_diff=total_stone
+    )
 
 @app.route('/reset')
 def reset():

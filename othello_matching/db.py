@@ -9,7 +9,7 @@ def create_players_table():
 
 def create_results_table():
     con = sqlite3.connect(DATABASE)
-    con.execute("CREATE TABLE IF NOT EXISTS results (name, win int, lose int, draw int, stone_diff int)")
+    con.execute("CREATE TABLE IF NOT EXISTS results (name, win int, lose int, stone_diff int)")
     con.close()
 
 def create_game_data_table():

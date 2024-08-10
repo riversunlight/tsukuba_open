@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{{name}}さんの戦績</title>
+  </head>
+  <body>
+    <h1>{{name}}さんの戦績</h1>
+    <table>
+      <tr>
+        <th>回戦</th>
+        <th>対戦相手</th>
+        <th>勝敗</th>
+        <th>石差</th>
+      </tr>
+      {% for battle in person_results%}
+      <tr>
+        <td>{{ battle.round }}</td>
+        <td>{{ battle.opponent }}</td>
+        <td>{{ battle.win }}</td>
+        <td>{{ battle.stone }}</td>
+      </tr>
+      {% endfor %}
+      <td></td>
+    </table>
+    <h2>合計</h2>
+    {{win}}勝{{lose}}敗 石差{{stone_diff}}
+    <br />
+    <a href="{{ url_for('index')}}">戻る</a>
+  </body>
+</html>

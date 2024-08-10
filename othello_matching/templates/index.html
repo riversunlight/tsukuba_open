@@ -20,16 +20,20 @@
         <th>名前</th>
         <th>勝数</th>
         <th>負数</th>
-        <th>分数</th>
         <th>石差</th>
+        <th>戦績確認</th>
       </tr>
       {% for player in ranks %}
       <tr>
         <td>{{ player.name }}</td>
         <td>{{ player.win }}</td>
         <td>{{ player.lose }}</td>
-        <td>{{ player.draw }}</td>
         <td>{{ player.stone_diff }}</td>
+        <td>
+          <a href="{{ url_for('person_result', name=player.name) }}"
+            >戦績確認</a
+          >
+        </td>
       </tr>
       {% endfor %}
     </table>
