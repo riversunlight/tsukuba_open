@@ -66,11 +66,14 @@ def add_game():
 
 @app.route('/register', methods=['POST'])
 def register():
+    print("he")
     name = request.form['name']
-    prefecture = request.form['prefecture']
+    short = request.form['short']
+    block = request.form['block']
     grade = request.form['grade']
+    print(grade)
     con = sqlite3.connect(DATABASE)
-    con.execute('INSERT INTO players VALUES(?, ?, ?)', [name, prefecture, grade])
+    con.execute('INSERT INTO players VALUES(?, ?, ?, ?)', [name, short, block, grade])
     con.execute('INSERT INTO results VALUES(?, ?, ?, ?)', [name, 0, 0, 0])
     con.commit()
     con.close()
