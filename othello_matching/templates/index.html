@@ -56,12 +56,20 @@
         </td>
       </tr>
     </table>
-    {% endfor %}
-    <a href="{{ url_for('matching') }}">マッチング</a><br />
-    <a href="{{ url_for('add_player') }}">選手登録</a><br />
-    <a href="{{ url_for('outcsv') }}">CSV出力</a><br />
-    <a href="{{ url_for('reset') }}"><font color="#FF0000">リセット</font></a
+    {% endfor %} {% if (game_data[0].round == 0 or game_data[0].during_game ==
+    0) %}
+    <a href="{{ url_for('matching') }}"><img src="assets/matching.png" /></a
     ><br />
+    {% else %}
+    <img src="assets/no_matching.png" /><br />
+    {% endif %} {% if (game_data[0].round == 0) %}
+    <a href="{{ url_for('add_player') }}"><img src="assets/register.png" /></a
+    ><br />
+    {% endif %}
+    <a href="{{ url_for('outcsv') }}"><img src="assets/csv.png" /></a><br />
+    {% for }
+    <br /><br /><br /><br /><br />
+    <a href="{{ url_for('reset') }}"><img src="assets/reset.png" /></a><br />
     <h2></h2>
   </body>
 </html>
