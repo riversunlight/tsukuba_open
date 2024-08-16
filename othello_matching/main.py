@@ -4,6 +4,8 @@ from functools import cmp_to_key
 import sqlite3
 import json
 import random
+import csv
+import pprint
 DATABASE = 'database.db'
 
 def comp(player1, player2):
@@ -224,4 +226,64 @@ def reset():
     con.execute("DELETE FROM game_result")
     con.commit()
     con.close()
+    return redirect(url_for('index'))
+
+@app.route('/outcsv')
+def outcsv():
+    datas = []
+    players = []
+    con = sqlite3.connect(DATABASE)
+    ranks_data = con.execute('SELECT * FROM results').fetchall()
+    for row in ranks_data:
+        players.append({'name': row[0], 'win': row[1], 'lose': row[2], 'stone_diff': row[3]})
+    
+    players = sorted(players, key=cmp_to_key(comp))
+
+    for player in players:
+        name = player['name']
+        player_info = con.execute('SELECT * FROM players WHERE name=?', [name]).fetchall()
+        result_info = con.execute('SELECT * FROM results WHERE name=?', [name]).fetchall()
+        battle_info = con.execute('SELECT * FROM game_result WHERE win_player=? OR lose_player=?', [name, name]).fetchall()
+        battle = []
+        for row in battle_info:
+            win = True if row[1] == name else False
+            tmp = {}
+            opponent=""
+            if win:
+                tmp['result'] = "〇"
+                opponent=row[2]
+            else:
+                tmp['result'] = "×"
+                opponent=row[1]
+            tmp['stone_diff'] = row[3]
+            if not win:
+                tmp['stone_diff'] *= -1;
+            opponent_info = con.execute('SELECT * FROM players WHERE name=?', [opponent]).fetchall()
+            tmp['opponent'] = opponent_info[0][1]
+            battle.append(tmp)
+
+        datas.append({'name': player['name'], 'short': player_info[0][1], 'block':player_info[0][2], 'grade': player_info[0][3], 'win': result_info[0][1], 'lose': result_info[0][2], 'stone_diff': result_info[0][3], 'battle': battle })
+
+    con.close()
+    with open('result.csv', 'w', newline="") as f:
+        writer = csv.writer(f)
+        prev_win = 100
+        prev_stone = 600
+        rank = 0
+        for data in datas:
+            if prev_win != data['win'] and prev_stone != data['stone_diff']:
+                rank += 1
+            prev_win = data['win']
+            prev_stone = data['stone_diff']
+            write_row1 = [str(rank) + ".", data['name'], data['short']]
+            write_row2 = ['', data['block'], data['grade']]
+
+            for row in data['battle']:
+                write_row1.append(row['result'] + str(row['stone_diff']))
+                write_row2.append(row['opponent'])
+
+            write_row1.append(str(data['win']) + "勝" + str(data['lose']) +  "敗")
+            write_row2.append(data['stone_diff'])
+            writer.writerow(write_row1)
+            writer.writerow(write_row2)
     return redirect(url_for('index'))
