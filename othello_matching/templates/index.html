@@ -52,7 +52,11 @@
             >結果入力</a
           >
           {% elif (match.winner == "不戦勝") %} 不戦勝 {% else %}
-          {{match.winner}}勝利!! {% endif %}
+          <a
+            href="{{ url_for('fix_game', player1=match.player1, player2=match.player2) }}"
+            >{{match.winner}}勝利!!</a
+          >
+          {% endif %}
         </td>
       </tr>
     </table>
@@ -67,7 +71,6 @@
     ><br />
     {% endif %}
     <a href="{{ url_for('outcsv') }}"><img src="assets/csv.png" /></a><br />
-    {% for }
     <br /><br /><br /><br /><br />
     <a href="{{ url_for('reset') }}"><img src="assets/reset.png" /></a><br />
     <h2></h2>

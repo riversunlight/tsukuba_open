@@ -6,6 +6,13 @@
     <title>試合結果入力</title>
   </head>
   <body>
+    {% if prev_data.winner != 'NULL' %}
+    <h2>前回入力</h2>
+    <br />
+    勝者: {{prev_data.winner}}<br />
+    敗者: {{prev_data.loser}}<br />
+    石差: {{prev_data.stone_diff}}<br />
+    {% endif%}
     <form method="post" action="{{ url_for('game_input') }}">
       勝者選択<br />
       <input

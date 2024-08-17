@@ -63,7 +63,32 @@ def add_game():
     return render_template(
         'game_input.html',
         player1=player1,
-        player2=player2
+        player2=player2,
+        prev_data={'winner': 'NULL'}
+    )
+
+@app.route('/fix_game')
+def fix_game():
+    player1 = request.args.get('player1')
+    player2 = request.args.get('player2')
+    con = sqlite3.connect(DATABASE)
+    data = con.execute('SELECT * FROM game_result WHERE (win_player = ? AND lose_player=?) OR (win_player=? AND lose_player=?)', [player1, player2, player2, player1]).fetchall()
+    prev_win = data[0][1]
+    prev_lose = data[0][2]
+    stone_diff = data[0][3]
+    con.execute('DELETE FROM game_result WHERE (win_player = ? AND lose_player=?) OR (win_player=? AND lose_player=?)', [player1, player2, player2, player1])
+    con.execute('UPDATE results SET win = win - 1 WHERE name = ?', [prev_win])
+    con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [stone_diff, prev_win])
+    con.execute('UPDATE results SET lose = lose - 1 WHERE name = ?', [prev_lose])
+    con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [stone_diff, prev_lose])
+    con.commit()
+    con.close()
+    prev_data = {'winner': prev_win, 'loser': prev_lose, 'stone_diff': stone_diff}
+    return render_template(
+        'game_input.html',
+        player1=player1,
+        player2=player2,
+        prev_data=prev_data
     )
 
 @app.route('/register', methods=['POST'])
