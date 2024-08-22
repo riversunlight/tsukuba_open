@@ -128,24 +128,42 @@ def concider_match(players, already_battle):
     matches = [[2 * i + j for j in range(0, 2)] for i in range(0, len(players) // 2)]
     print(already_battle)
     best_cost = matching_cost(matches, already_battle)
-
-    print(best_cost)
+    best_matches = copy.deepcopy(matches)
+    tabu_span = 10
+    tabu_list = [[- tabu_span - 10 for i in range(0, len(players))] for j in range(0, len(players))]
+    search_cnt = 50000
     # 局所最適化
-    for _ in range(0, 100):
+    for _ in range(0, search_cnt):
+        next_cost = 1000000000
+        next_matches = matches
         # 近傍解
+        next_i = -1
         for i in range(0, len(matches) - 1):
             for j in range(0, 2):
                 new_match = copy.deepcopy(matches)
                 new_match[i][1], new_match[i + 1][j] = new_match[i + 1][j], new_match[i][1]
                 new_cost = matching_cost(new_match, already_battle)
+
                 if new_cost < best_cost:
-                    matches = new_match
+                    best_matches = new_match
                     best_cost = new_cost
-        #print(str(_) + "回目:")
-        #print(matches)
-        #print(best_cost)
+                
+                prev_turn = max(tabu_list[new_match[i][0]][new_match[i][1]], tabu_list[new_match[i + 1][0]][new_match[i + 1][1]])
+                if _ - prev_turn < tabu_span:
+                    continue
+
+                if new_cost < next_cost:
+                    next_cost = new_cost
+                    next_matches = new_match
+                    next_i = i
+        if next_i != -1:
+            tabu_list[matches[next_i][0]][matches[next_i][1]] = _
+            tabu_list[matches[next_i][1]][matches[next_i][0]] = _
+            tabu_list[matches[next_i + 1][0]][matches[next_i + 1][1]] = _
+            tabu_list[matches[next_i + 1][1]][matches[next_i + 1][0]] = _
+        matches = copy.deepcopy(next_matches)
         
-    return matches
+    return best_matches
 
 @app.route('/matching')
 def matching():
@@ -173,7 +191,6 @@ def matching():
             if len(befo_game) != 0:
                 already_battle[i][j] = 1
                 already_battle[j][i] = 1
-    print(already_battle)
     con.close()
     pairs = concider_match(players_id, already_battle)
 
@@ -219,6 +236,7 @@ def matching():
             continue
         if player2 == "不戦勝":
             no_game_player = pair[0]
+            continue
         con.execute("INSERT INTO now_matches VALUES(?, ?, ?)", [player1, player2, "PLAYING"])
         print(f'player1: {player1}, player2; {player2}')
     if (no_game_player != -1):
