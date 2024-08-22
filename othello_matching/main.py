@@ -380,20 +380,25 @@ def outcsv():
         prev_win = 100
         prev_stone = 600
         rank = 0
+        id = 0
         for data in datas:
-            if prev_win != data['win'] and prev_stone != data['stone_diff']:
-                rank += 1
+            id += 1
+            if prev_win != data['win'] or (prev_win == data['win'] and prev_stone != data['stone_diff']):
+                rank = id
             prev_win = data['win']
             prev_stone = data['stone_diff']
+            print(prev_stone)
             write_row1 = [str(rank) + ".", data['name'], data['short']]
             write_row2 = ['', data['block'], data['grade']]
-
+            stone_tot = 0
             for row in data['battle']:
-                write_row1.append(row['result'] + str(row['stone_diff']))
+                stone_num = 32 + row['stone_diff'] // 2
+                stone_tot += stone_num
+                write_row1.append(row['result'] + str(stone_num))
                 write_row2.append(row['opponent'])
 
             write_row1.append(str(data['win']) + "勝" + str(data['lose']) +  "敗")
-            write_row2.append(data['stone_diff'])
+            write_row2.append(str(stone_tot))
             writer.writerow(write_row1)
             writer.writerow(write_row2)
     return redirect(url_for('index'))
