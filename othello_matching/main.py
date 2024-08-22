@@ -6,6 +6,7 @@ import json
 import random
 import csv
 import pprint
+import copy
 DATABASE = 'database.db'
 
 def comp(player1, player2):
@@ -81,6 +82,7 @@ def fix_game():
     con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [stone_diff, prev_win])
     con.execute('UPDATE results SET lose = lose - 1 WHERE name = ?', [prev_lose])
     con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [stone_diff, prev_lose])
+    con.execute('UPDATE game_data SET during_game = during_game + 1')
     con.commit()
     con.close()
     prev_data = {'winner': prev_win, 'loser': prev_lose, 'stone_diff': stone_diff}
@@ -106,6 +108,45 @@ def register():
     con.close()
     return redirect(url_for('index'))
 
+def matching_cost(matches, already_battle):
+    res = 0
+    C_REMATCH = 10000000
+    C_RANK = 1
+    # 不戦勝: そういう人物がいることにする!!(順位は最下位)
+    # 不戦勝っていう対戦相手と再戦するのもペナルティ
+    for i in range(0, len(matches)):
+        p1 = matches[i][0]
+        p2 = matches[i][1]
+        res += (p1 - p2) * (p1 - p2) * C_RANK
+        res += already_battle[p1][p2] * C_REMATCH
+    return res
+
+
+# タブーサーチが相性よさそう!
+# 同じ組み合わせが存在するのを部分的にでも防ぐ!!
+def concider_match(players, already_battle):
+    matches = [[2 * i + j for j in range(0, 2)] for i in range(0, len(players) // 2)]
+    print(already_battle)
+    best_cost = matching_cost(matches, already_battle)
+
+    print(best_cost)
+    # 局所最適化
+    for _ in range(0, 100):
+        # 近傍解
+        for i in range(0, len(matches) - 1):
+            for j in range(0, 2):
+                new_match = copy.deepcopy(matches)
+                new_match[i][1], new_match[i + 1][j] = new_match[i + 1][j], new_match[i][1]
+                new_cost = matching_cost(new_match, already_battle)
+                if new_cost < best_cost:
+                    matches = new_match
+                    best_cost = new_cost
+        #print(str(_) + "回目:")
+        #print(matches)
+        #print(best_cost)
+        
+    return matches
+
 @app.route('/matching')
 def matching():
     # DBからデータを持ってきて保存
@@ -117,31 +158,51 @@ def matching():
     
     # 順位順にsort(比較関数作ってやる)
     players = sorted(players, key=cmp_to_key(comp))
-
     n = len(players)
-    pairs = []
-    dicided = [0] * n
-    for i in range(0, n):
-        if (dicided[i]):
-            continue;
-        for j in range(i + 1, n):
-            if (dicided[j]):
-                continue
-            # すでに当たってたら飛ばす
+    if len(players) % 2 == 1:
+        players.append({'name': "不戦勝", 'win': 0, 'lose': 100, 'stone_diff': -1000})
+
+    players_id = [0 for i in range(0, (len(players)))]
+
+    already_battle = [[0 for i in range(0, len(players_id))] for j in range(0, len(players_id))]
+    for i in range(0, len(players)):
+        for j in range(0, len(players)):
+            if players[i]['name'] == players[j]['name']:
+                continue;
             befo_game = con.execute("SELECT * FROM game_result WHERE (win_player=? AND lose_player=?) OR (win_player=? AND lose_player=?)", [players[i]['name'], players[j]['name'], players[j]['name'], players[i]['name']]).fetchall()
             if len(befo_game) != 0:
-                continue
-            pairs.append([i, j])
-            dicided[i] = 1
-            dicided[j] = 1
-            break;
-        
-    no_game_player = -1
-    for i in range(0, n):
-        if dicided[i] == 0:
-            no_game_player = i
-            break
-    
+                already_battle[i][j] = 1
+                already_battle[j][i] = 1
+    print(already_battle)
+    con.close()
+    pairs = concider_match(players_id, already_battle)
+
+    #いにしえの嘘貪欲??
+    # 未証明: 嘘か本当か知りえない
+    #n = len(players)
+    #pairs = []
+    #dicided = [0] * n
+    #for i in range(0, n):
+    #    if (dicided[i]):
+    #        continue;
+    #    for j in range(i + 1, n):
+    #        if (dicided[j]):
+    #            continue
+    #        # すでに当たってたら飛ばす
+    #        befo_game = con.execute("SELECT * FROM game_result WHERE (win_player=? AND lose_player=?) OR (win_player=? AND lose_player=?)", [players[i]['name'], players[j]['name'], players[j]['name'], players[i]['name']]).fetchall()
+    #        if len(befo_game) != 0:
+    #            continue
+    #        pairs.append([i, j])
+    #        dicided[i] = 1
+    #        dicided[j] = 1
+    #        break;
+    #    
+    #no_game_player = -1
+    #for i in range(0, n):
+    #    if dicided[i] == 0:
+    #        no_game_player = i
+    #        break
+    #
     con = sqlite3.connect(DATABASE)
     game_data = con.execute("SELECT * FROM game_data").fetchall()
     round = -1
@@ -149,9 +210,15 @@ def matching():
         round = row[0]
     print(round)
     con.execute("DELETE FROM now_matches")
+    no_game_player = -1
     for pair in pairs:
         player1 = players[pair[0]]['name']
         player2 = players[pair[1]]['name']
+        if player1 == "不戦勝":
+            no_game_player = pair[1]
+            continue
+        if player2 == "不戦勝":
+            no_game_player = pair[0]
         con.execute("INSERT INTO now_matches VALUES(?, ?, ?)", [player1, player2, "PLAYING"])
         print(f'player1: {player1}, player2; {player2}')
     if (no_game_player != -1):
