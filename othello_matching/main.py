@@ -7,6 +7,7 @@ import random
 import csv
 import pprint
 import copy
+import time
 DATABASE = 'database.db'
 
 def comp(player1, player2):
@@ -26,13 +27,11 @@ def comp(player1, player2):
 #トップページ
 @app.route('/')
 def index():
-    print("a")
     con = sqlite3.connect(DATABASE)
     db_player = con.execute("SELECT * FROM results").fetchall()
     _game_data = con.execute("SELECT * FROM game_data").fetchall()
     _match_data = con.execute("SELECT * FROM now_matches").fetchall()
     con.close()
-    print("b")
     ranks = []
     game_data = []
     now_matches = []
@@ -43,7 +42,6 @@ def index():
         game_data.append({'round': row[0], 'during_game': row[1]})
     for row in _match_data:
         now_matches.append({'player1': row[0], 'player2': row[1], 'winner': row[2]})
-    print(now_matches)
     return render_template(
         'index.html',
         ranks=ranks,
@@ -131,9 +129,13 @@ def concider_match(players, already_battle):
     best_matches = copy.deepcopy(matches)
     tabu_span = 10
     tabu_list = [[- tabu_span - 10 for i in range(0, len(players))] for j in range(0, len(players))]
-    search_cnt = 50000
+    exe_time = 1000
+    start_time = time.time()
+    search_cnt = 100000
     # 局所最適化
     for _ in range(0, search_cnt):
+        if time.time() - start_time > exe_time:
+            break
         next_cost = 1000000000
         next_matches = matches
         # 近傍解
@@ -181,6 +183,7 @@ def matching():
         players.append({'name': "不戦勝", 'win': 0, 'lose': 100, 'stone_diff': -1000})
 
     players_id = [0 for i in range(0, (len(players)))]
+    #ここまでの工夫で遅刻早退対応!!(入力受け取り)
 
     already_battle = [[0 for i in range(0, len(players_id))] for j in range(0, len(players_id))]
     for i in range(0, len(players)):
@@ -225,7 +228,6 @@ def matching():
     round = -1
     for row in game_data:
         round = row[0]
-    print(round)
     con.execute("DELETE FROM now_matches")
     no_game_player = -1
     for pair in pairs:
@@ -256,10 +258,8 @@ def matching():
 
 @app.route('/game_input', methods=["POST"])
 def game_input():
-    print(request.form)
     win_name = request.form['winner']
     stone_diff = request.form['stone_diff']
-    print(win_name)
     round_int = 10
     lose_name = "?"
     during_game = 10
@@ -269,13 +269,11 @@ def game_input():
         round_int = row[0]
         during_game = row[1]
     game_data = con.execute('SELECT * FROM now_matches WHERE player1=? OR player2=?', [win_name, win_name]).fetchall()
-    print(game_data)
     for row in game_data:
         if row[0]==win_name:
             lose_name=row[1]
         else:
             lose_name=row[0]
-    print("lose_name")
     con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [round_int, win_name, lose_name, stone_diff])
     con.execute('UPDATE results SET win = win + 1 WHERE name = ?', [win_name])
     con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [stone_diff, win_name])
@@ -296,7 +294,6 @@ def person_result():
     con = sqlite3.connect(DATABASE)
     person_result_data = con.execute('SELECT * FROM game_result WHERE (win_player=? OR lose_player=?)', [name, name]).fetchall()
     person_results = []
-    print(person_result_data)
     result_data = con.execute('SELECT * FROM results WHERE name=?', [name]).fetchall()
     for row in person_result_data:
         my_id = 1
@@ -323,12 +320,14 @@ def person_result():
         stone_diff=total_stone
     )
 
+@app.route('/reset_conf')
+def reset_conf():
+    return render_template('reset_conf.html')
+
 @app.route('/reset')
 def reset():
-    print("a")
     con = sqlite3.connect(DATABASE)
     con.execute('DELETE from players')
-    print("c")
     con.execute('DELETE from results')
     con.execute('DELETE from game_data')
     con.execute("INSERT INTO game_data VALUES(?, ?)", [0, 0])
