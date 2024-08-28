@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{{name}}さんの状態変更</title>
+  </head>
+  <body>
+    <h1>{{name}}さんの状態変更</h1>
+    現在の状態: {{ status }}
+    <form method="post" action="{{ url_for('change_status_exe') }}">
+      <select name="status">
+        <option value="参加">参加</option>
+        <option value="遅刻">遅刻</option>
+        <option value="中抜け">中抜け</option>
+        <option value="早退">早退</option>
+      </select>
+      <input type="hidden" name="name" value="{{name}}" />
+      <input type="submit" value="変更" />
+    </form>
+    <a href="{{ url_for('index')}}">戻る</a>
+  </body>
+</html>

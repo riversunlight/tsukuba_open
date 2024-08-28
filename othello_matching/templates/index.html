@@ -22,6 +22,7 @@
         <th>負数</th>
         <th>石差</th>
         <th>戦績確認</th>
+        <th>状態</th>
       </tr>
       {% for player in ranks %}
       <tr>
@@ -32,6 +33,11 @@
         <td>
           <a href="{{ url_for('person_result', name=player.name) }}"
             >戦績確認</a
+          >
+        </td>
+        <td>
+          <a href="{{ url_for('change_status', name=player.name)}}"
+            >{{ player.status }}</a
           >
         </td>
       </tr>

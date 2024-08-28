@@ -36,7 +36,7 @@ def index():
     game_data = []
     now_matches = []
     for row in db_player:
-        ranks.append({'name': row[0], 'win': row[1], 'lose': row[2], 'stone_diff': row[3]})
+        ranks.append({'name': row[0], 'win': row[1], 'lose': row[2], 'stone_diff': row[3], 'status': row[4]})
     ranks = sorted(ranks, key=cmp_to_key(comp))
     for row in _game_data:
         game_data.append({'round': row[0], 'during_game': row[1]})
@@ -93,15 +93,13 @@ def fix_game():
 
 @app.route('/register', methods=['POST'])
 def register():
-    print("he")
     name = request.form['name']
     short = request.form['short']
     block = request.form['block']
     grade = request.form['grade']
-    print(grade)
     con = sqlite3.connect(DATABASE)
     con.execute('INSERT INTO players VALUES(?, ?, ?, ?)', [name, short, block, grade])
-    con.execute('INSERT INTO results VALUES(?, ?, ?, ?)', [name, 0, 0, 0])
+    con.execute('INSERT INTO results VALUES(?, ?, ?, ?, ?)', [name, 0, 0, 0, "参加"])
     con.commit()
     con.close()
     return redirect(url_for('index'))
@@ -256,8 +254,33 @@ def matching():
     con.close()
     return redirect(url_for('index'))
 
+@app.route('/change_status')
+def change_status():
+    name = request.args.get('name')
+    con = sqlite3.connect(DATABASE)
+    player = con.execute('SELECT * FROM results WHERE name=?', [name]).fetchall()
+    status = player[0][4]
+    con.close()
+    return render_template(
+        'change_status.html',
+        name=name,
+        status = status
+    )
+
+@app.route('/change_status_exe', methods=["POST"])
+def change_status_exe():
+    name = request.form['name']
+    status = request.form['status']
+    con = sqlite3.connect(DATABASE)
+    con.execute('UPDATE results SET status = ? WHERE name = ?', [status, name])
+    con.commit()
+    con.close()
+    return redirect(url_for('index'))
+
+
 @app.route('/game_input', methods=["POST"])
 def game_input():
+    print(request.form)
     win_name = request.form['winner']
     stone_diff = request.form['stone_diff']
     round_int = 10
