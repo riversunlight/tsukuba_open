@@ -66,13 +66,20 @@
         </td>
       </tr>
     </table>
-    {% endfor %} {% if (game_data[0].round == 0 or game_data[0].during_game ==
-    0) %}
+    {% endfor %} {% if (game_data[0].round == 0 or game_data[0].during_game == 0
+    or end_game == 0) %}
     <a href="{{ url_for('matching') }}"><img src="assets/matching.png" /></a
     ><br />
+    <img src="assets/no_hand_matching.png" /><br />
     {% else %}
     <img src="assets/no_matching.png" /><br />
-    {% endif %} {% if (game_data[0].round == 0) %}
+    {% if end_game == 0 %}
+    <a href="{{ url_for('hand_matching') }}"
+      ><img src="assets/hand_matching.png" /></a
+    ><br />
+    {% else %}
+    <img src="assets/no_hand_matching.png" /><br />
+    {% endif %}{% endif %} {% if (game_data[0].round == 0) %}
     <a href="{{ url_for('add_player') }}"><img src="assets/register.png" /></a
     ><br />
     {% endif %}

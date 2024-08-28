@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>手動訂正</title>
+  </head>
+  <body>
+    <h1>手動訂正</h1>
+
+    <h2>現在のマッチング</h2>
+    <table border="1">
+      <tr>
+        <th>選手1</th>
+        <th>選手2</th>
+      </tr>
+      {% for match in now_matches %}
+      <tr>
+        <td>{{ match.player1 }}</td>
+        <td>{{ match.player2 }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    <br />
+    <form method="post" action="{{ url_for('swap_match') }}">
+      {% for i in [1, 2] %} 選手{{i}}
+      <select name="name{{i}}">
+        {% for player in players %}
+        <option value="{{player.name}}">{{player.name}}</option>
+        {% endfor %}
+      </select>
+      <br />
+      {% endfor %}
+      <input type="submit" value="登録" />
+    </form>
+    <br />
+    <a href="{{ url_for('index')}}">戻る</a>
+  </body>
+</html>

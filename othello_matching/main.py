@@ -35,6 +35,7 @@ def index():
     ranks = []
     game_data = []
     now_matches = []
+    end_game = 0
     for row in db_player:
         ranks.append({'name': row[0], 'win': row[1], 'lose': row[2], 'stone_diff': row[3], 'status': row[4]})
     ranks = sorted(ranks, key=cmp_to_key(comp))
@@ -42,11 +43,14 @@ def index():
         game_data.append({'round': row[0], 'during_game': row[1]})
     for row in _match_data:
         now_matches.append({'player1': row[0], 'player2': row[1], 'winner': row[2]})
+        if row[2] != "PLAYING":
+            end_game += 1
     return render_template(
         'index.html',
         ranks=ranks,
         game_data=game_data,
-        now_matches=now_matches
+        now_matches=now_matches,
+        end_game=end_game
     )
 
 @app.route('/add_player')
@@ -252,6 +256,49 @@ def matching():
     con.execute("INSERT INTO game_data VALUES(?, ?)", [round + 1, n // 2])
     con.commit()
     con.close()
+    return redirect(url_for('index'))
+
+@app.route('/hand_matching')
+def hand_matching():
+    now_matches = []
+    players = []
+    con = sqlite3.connect(DATABASE)
+    _match_data = con.execute("SELECT * FROM now_matches").fetchall()
+    _players = con.execute("SELECT * FROM players").fetchall()
+    for row in _match_data:
+        now_matches.append({'player1': row[0], 'player2': row[1], 'winner': row[2]})
+    for row in _players:
+        players.append({'name': row[0]})
+    con.close()
+
+    return render_template(
+        'hand_matching.html',
+        now_matches=now_matches,
+        players = players
+    )
+
+@app.route('/swap_match', methods=["POST"])
+def swap_match():
+    print(request.form)
+    names = ["_", "__"]
+    oppos = ["_", "__"]
+    names[0] = request.form['name1']
+    names[1] = request.form['name2']
+    if names[0] != names[1]:
+        con = sqlite3.connect(DATABASE)
+        for i in range(0, 2):
+            mch = con.execute("SELECT * FROM now_matches WHERE player1 = ? OR player2 = ?", [names[i], names[i]]).fetchall()
+            oppos[i] = mch[0][0] if mch[0][0] != names[i] else mch[0][1]
+        print(oppos)
+        for i in range(0, 2):
+            con.execute("DELETE FROM now_matches WHERE (player1 = ? AND player2 = ?) OR (player1 = ? AND player2 = ?)", [names[i], oppos[i], oppos[i], names[i]])
+    
+        con.execute("INSERT INTO now_matches VALUES(?, ?, ?)", [names[0], names[1], "PLAYING"])
+        con.execute("INSERT INTO now_matches VALUES(?, ?, ?)", [oppos[0], oppos[1], "PLAYING"])
+    
+        con.commit()
+        con.close()
+
     return redirect(url_for('index'))
 
 @app.route('/change_status')
