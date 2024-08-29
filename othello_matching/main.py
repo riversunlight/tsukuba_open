@@ -35,7 +35,7 @@ def index():
     ranks = []
     game_data = []
     now_matches = []
-    no_match = []
+    no_matches = []
     end_game = 0
     for row in db_player:
         ranks.append({'name': row[0], 'win': row[1], 'lose': row[2], 'stone_diff': row[3], 'status': row[4]})
@@ -43,15 +43,20 @@ def index():
     for row in _game_data:
         game_data.append({'round': row[0], 'during_game': row[1]})
     for row in _match_data:
-        now_matches.append({'player1': row[0], 'player2': row[1], 'winner': row[2]})
+        if row[2] == "不戦勝" or row[2] == "不戦負":
+            no_matches.append({'player1': row[0], 'player2': row[1], 'winner': row[2]})
+        else:
+            now_matches.append({'player1': row[0], 'player2': row[1], 'winner': row[2]})
         if row[2] != "PLAYING":
             end_game += 1
+
     return render_template(
         'index.html',
         ranks=ranks,
         game_data=game_data,
         now_matches=now_matches,
-        end_game=end_game
+        end_game=end_game,
+        no_matches = no_matches
     )
 
 @app.route('/add_player')

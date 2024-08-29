@@ -75,7 +75,17 @@
         </td>
       </tr>
     </table>
-    {% endfor %} {% endif %}
+    {% endfor %} {% if no_matches |length != 0 %}
+    <h2>不戦者</h2>
+    {% for match in no_matches %}
+    <table border="1">
+      <tr>
+        <td>{{ match.player1 }}</td>
+        <td>{{ match.winner }}</td>
+        <td>訂正</td>
+      </tr>
+    </table>
+    {% endfor %} {% endif %} {% endif %}
     <br /><br />
     {% if (game_data[0].round == 0 or game_data[0].during_game == 0 or end_game
     == 0) %}
