@@ -23,6 +23,9 @@
         <th>石差</th>
         <th>戦績確認</th>
         <th>状態</th>
+        {% if game_data[0].round == 0 %}
+        <th>削除</th>
+        {% endif %}
       </tr>
       {% for player in ranks %}
       <tr>
@@ -40,10 +43,16 @@
             >{{ player.status }}</a
           >
         </td>
+        {% if game_data[0].round == 0 %}
+        <td>
+          <a href="{{url_for('delete_player', name=player.name)}}">削除</a>
+        </td>
+        {% endif %}
       </tr>
       {% endfor %}
     </table>
 
+    {% if game_data[0].round != 0 %}
     <h2>対戦カード</h2>
     残り試合数 {{ game_data[0].during_game }}<br />
     {% for match in now_matches %}
@@ -66,8 +75,10 @@
         </td>
       </tr>
     </table>
-    {% endfor %} {% if (game_data[0].round == 0 or game_data[0].during_game == 0
-    or end_game == 0) %}
+    {% endfor %} {% endif %}
+    <br /><br />
+    {% if (game_data[0].round == 0 or game_data[0].during_game == 0 or end_game
+    == 0) %}
     <a href="{{ url_for('matching') }}"><img src="assets/matching.png" /></a
     ><br />
     {% else %}

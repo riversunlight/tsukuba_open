@@ -60,6 +60,18 @@ def add_player():
         'add_player.html'
     )
 
+@app.route('/delete_player')
+def delete_player():
+    name = request.args.get('name')
+    con = sqlite3.connect(DATABASE)
+    data = con.execute('SELECT * FROM players WHERE name = ?', [name]).fetchall()
+    con.execute('DELETE FROM players WHERE name = ?', [name])
+    con.execute('DELETE FROM results WHERE name = ?', [name])
+    con.commit()
+    con.close()
+
+    return redirect(url_for('index'))
+
 @app.route('/add_game')
 def add_game():
     player1 = request.args.get('player1')
@@ -80,13 +92,7 @@ def fix_game():
     prev_win = data[0][1]
     prev_lose = data[0][2]
     stone_diff = data[0][3]
-    #con.execute('DELETE FROM game_result WHERE (win_player = ? AND lose_player=?) OR (win_player=? AND lose_player=?)', [player1, player2, player2, player1])
-    #con.execute('UPDATE results SET win = win - 1 WHERE name = ?', [prev_win])
-    #con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [stone_diff, prev_win])
-    #con.execute('UPDATE results SET lose = lose - 1 WHERE name = ?', [prev_lose])
-    #con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [stone_diff, prev_lose])
-    #con.execute('UPDATE game_data SET during_game = during_game + 1')
-    #con.commit()
+    
     con.close()
     prev_data = {'winner': prev_win, 'loser': prev_lose, 'stone_diff': stone_diff}
     return render_template(
