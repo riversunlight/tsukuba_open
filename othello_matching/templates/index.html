@@ -82,7 +82,12 @@
       <tr>
         <td>{{ match.player1 }}</td>
         <td>{{ match.winner }}</td>
-        <td>訂正</td>
+        <td>
+          <a
+            href="{{url_for('fix_game', player1=match.player1, player2=match.player2)}}"
+            >訂正</a
+          >
+        </td>
       </tr>
     </table>
     {% endfor %} {% endif %} {% endif %}

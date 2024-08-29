@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>不戦訂正</title>
+  </head>
+  <body>
+    <h1>不戦訂正</h1>
+    <h2>前回入力</h2>
+    <br />
+    名前: {{player}}<br />
+    不戦種類: {{win_lose}}<br />
+    石差: {{prev_stone}}<br />
+    <br />
+    <form method="post" action="{{ url_for('fix_no_game') }}">
+      不戦種類選択<br />
+      <input type="radio" id="win" name="kind" value="不戦勝" /><label
+        for="不戦勝"
+        >不戦勝</label
+      ><br />
+      <input type="radio" id="lose" name="kind" value="不戦敗" /><label
+        for="不戦敗"
+        >不戦敗</label
+      ><br />
+      <label for="stone_diff">石差(絶対値、符号なし)</label>
+      <input type="text" id="stone_diff" name="stone_diff" />
+      <input type="hidden" name="player" id="player" value="{{ player }}" />
+      <input type="submit" value="登録" />
+    </form>
+
+    <a href="{{ url_for('index')}}">戻る</a>
+  </body>
+</html>

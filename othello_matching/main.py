@@ -43,7 +43,7 @@ def index():
     for row in _game_data:
         game_data.append({'round': row[0], 'during_game': row[1]})
     for row in _match_data:
-        if row[2] == "不戦勝" or row[2] == "不戦負":
+        if row[2] == "不戦勝" or row[2] == "不戦敗":
             no_matches.append({'player1': row[0], 'player2': row[1], 'winner': row[2]})
         else:
             now_matches.append({'player1': row[0], 'player2': row[1], 'winner': row[2]})
@@ -93,19 +93,72 @@ def fix_game():
     player1 = request.args.get('player1')
     player2 = request.args.get('player2')
     con = sqlite3.connect(DATABASE)
-    data = con.execute('SELECT * FROM game_result WHERE (win_player = ? AND lose_player=?) OR (win_player=? AND lose_player=?)', [player1, player2, player2, player1]).fetchall()
-    prev_win = data[0][1]
-    prev_lose = data[0][2]
-    stone_diff = data[0][3]
+    game_data = con.execute('SELECT * FROM game_data').fetchall()
+    round = game_data[0][0]
     
+    if player1 == '-' or player2 == '-':
+        player = player1 if player2 == '-' else player2
+        data = con.execute('SELECT * FROM game_result WHERE round = ? AND (win_player = ? OR lose_player = ?)', [round, player, player]).fetchall()
+        prev_stone = data[0][3]
+        win_lose = "不戦勝" if data[0][1] == player else "不戦敗"
+        return render_template(
+            'fix_no_game.html',
+            player=player,
+            win_lose = win_lose,
+            prev_stone = prev_stone
+        )
+    else:
+        data = con.execute('SELECT * FROM game_result WHERE (win_player = ? AND lose_player=?) OR (win_player=? AND lose_player=?)', [player1, player2, player2, player1]).fetchall()
+        prev_win = data[0][1]
+        prev_lose = data[0][2]
+        stone_diff = data[0][3]
+        
+        con.close()
+        prev_data = {'winner': prev_win, 'loser': prev_lose, 'stone_diff': stone_diff}
+        return render_template(
+            'game_input.html',
+            player1=player1,
+            player2=player2,
+            prev_data=prev_data
+        )
+
+@app.route('/fix_no_game', methods=['POST'])
+def fix_no_game():
+    print(request.form)
+    player = request.form['player']
+    kind = request.form['kind']
+    stone_diff = request.form['stone_diff']
+    con = sqlite3.connect(DATABASE)
+    game_data = con.execute('SELECT * FROM game_data').fetchall()
+    round = game_data[0][0]
+    data = con.execute('SELECT * FROM game_result WHERE round = ? AND (win_player = ? OR lose_player = ?)', [round, player, player]).fetchall()
+    prev_win = data[0][1]
+    prev_kind = "不戦勝" if prev_win == player else "不戦敗"
+    prev_stone = data[0][3]
+    if prev_kind == "不戦勝":
+        con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [prev_stone, player])
+        con.execute('UPDATE results SET win = win - 1 WHERE name = ?', [player])
+    else:
+        con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [prev_stone, player])
+        con.execute('UPDATE results SET lose = lose - 1 WHERE name = ?', [player])
+    con.execute('DELETE FROM game_result WHERE round = ? AND (win_player = ? OR lose_player = ?)', [round, player, player]).fetchall()
+    con.execute('DELETE FROM now_matches WHERE player1 = ? OR player2 = ?', [player, player]).fetchall()
+
+    if kind == "不戦勝":
+        con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [stone_diff, player])
+        con.execute('UPDATE results SET win = win + 1 WHERE name = ?', [player])
+        con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [round, player, "不戦勝", stone_diff])
+        con.execute('INSERT INTO now_matches VALUES(?, ?, ?)', [player, "-", "不戦勝"])
+    else:
+        con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [stone_diff, player])
+        con.execute('UPDATE results SET lose = lose + 1 WHERE name = ?', [player])
+        con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [round, "不戦敗", player, stone_diff])
+        con.execute('INSERT INTO now_matches VALUES(?, ?, ?)', [player, "-", "不戦敗"])
+    
+    con.commit()
     con.close()
-    prev_data = {'winner': prev_win, 'loser': prev_lose, 'stone_diff': stone_diff}
-    return render_template(
-        'game_input.html',
-        player1=player1,
-        player2=player2,
-        prev_data=prev_data
-    )
+
+    return redirect(url_for('index'))
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -256,7 +309,7 @@ def matching():
         print(f'player1: {player1}, player2; {player2}')
     if (no_game_player != -1):
         player1 = players[no_game_player]['name']
-        con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [round, player1, "不戦勝", 2])
+        con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [round + 1, player1, "不戦勝", 2])
         con.execute("INSERT INTO now_matches VALUES (?, ?, ?)", [player1, "-", "不戦勝"])
         con.execute('UPDATE results SET win = win + 1 WHERE name = ?', [player1])
         con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [2, player1])
