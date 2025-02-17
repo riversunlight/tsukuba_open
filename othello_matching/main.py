@@ -59,6 +59,7 @@ def fix_game():
         )
     else:
         round, prev_data = gm.get_game_result(player1, player2)
+        print(prev_data)
         return render_template(
             'game_input.html',
             player1=player1,
@@ -172,7 +173,7 @@ def game_input():
 def person_result():
     name = request.args.get('name')
 
-    person_results, total_win, total_lose, total_stone = gm.person_result()
+    person_results, total_win, total_lose, total_stone = gm.person_result(name)
     return render_template(
         'person_result.html',
         person_results=person_results,

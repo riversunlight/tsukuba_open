@@ -2,92 +2,13 @@
 import sqlite3
 import csv
 from functools import cmp_to_key
-import random
-import copy
-import time
 
-def comp(player1, player2):
-    score1 = player1['win']
-    score2 = player2['win']
-    if score1 > score2:
-        return -1
-    elif score1 < score2:
-        return 1
-    else:
-        if player1['stone_diff'] > player2['stone_diff']:
-            return -1
-        elif player1['stone_diff'] < player2['stone_diff']:
-            return 1
-    return 1 - 2 * random.randint(0, 1)
+from .matcher import Matcher
 
-def c2(a, b):
-    if a[0] < b[0]:
-        return -1
-    else:
-        return 1
-
-def matching_cost(matches, already_battle):
-    res = 0
-    C_REMATCH = 10000000
-    C_RANK = 1
-    # 不戦勝: そういう人物がいることにする!!(順位は最下位)
-    # 不戦勝っていう対戦相手と再戦するのもペナルティ
-    for i in range(0, len(matches)):
-        p1 = matches[i][0]
-        p2 = matches[i][1]
-        res += (p1 - p2) * (p1 - p2) * C_RANK
-        res += already_battle[p1][p2] * C_REMATCH
-    return res
-
-
-# タブーサーチが相性よさそう!
-# 同じ組み合わせが存在するのを部分的にでも防ぐ!!
-def concider_match(players, already_battle):
-    matches = [[2 * i + j for j in range(0, 2)] for i in range(0, len(players) // 2)]
-    best_cost = matching_cost(matches, already_battle)
-    best_matches = copy.deepcopy(matches)
-    tabu_span = 10
-    tabu_list = [[- tabu_span - 10 for i in range(0, len(players))] for j in range(0, len(players))]
-    exe_time = 1000
-    start_time = time.time()
-    search_cnt = 100000
-    # 局所最適化
-    for _ in range(0, search_cnt):
-        if time.time() - start_time > exe_time:
-            break
-        next_cost = 1000000000
-        next_matches = matches
-        # 近傍解
-        next_i = -1
-        for i in range(0, len(matches) - 1):
-            for j in range(0, 2):
-                new_match = copy.deepcopy(matches)
-                new_match[i][1], new_match[i + 1][j] = new_match[i + 1][j], new_match[i][1]
-                new_cost = matching_cost(new_match, already_battle)
-
-                if new_cost < best_cost:
-                    best_matches = new_match
-                    best_cost = new_cost
-                
-                prev_turn = max(tabu_list[new_match[i][0]][new_match[i][1]], tabu_list[new_match[i + 1][0]][new_match[i + 1][1]])
-                if _ - prev_turn < tabu_span:
-                    continue
-
-                if new_cost < next_cost:
-                    next_cost = new_cost
-                    next_matches = new_match
-                    next_i = i
-        if next_i != -1:
-            tabu_list[matches[next_i][0]][matches[next_i][1]] = _
-            tabu_list[matches[next_i][1]][matches[next_i][0]] = _
-            tabu_list[matches[next_i + 1][0]][matches[next_i + 1][1]] = _
-            tabu_list[matches[next_i + 1][1]][matches[next_i + 1][0]] = _
-        matches = copy.deepcopy(next_matches)
-        
-    return best_matches
     
 class GameManager():
     DATABASE = 'database.db'
+    matcher = Matcher()
 
     def register(self, name, short, block, grade):
         con = sqlite3.connect(self.DATABASE)
@@ -149,7 +70,7 @@ class GameManager():
 
         for row in db_player:
             ranks.append({'name': row[0], 'win': row[1], 'lose': row[2], 'stone_diff': row[3], 'status': row[4]})
-        ranks = sorted(ranks, key=cmp_to_key(comp))
+        ranks = sorted(ranks, key=cmp_to_key(self.matcher.comp))
 
         game_data = [{'round': self.round, 'during_game': self.during_game}]
         
@@ -206,11 +127,10 @@ class GameManager():
         con = sqlite3.connect(self.DATABASE)
         ranks_data = con.execute('SELECT * FROM results').fetchall()
         for row in ranks_data:
-            print(row)
             players.append({'name': row[0], 'win': row[1], 'lose': row[2], 'stone_diff': row[3]})
         
         # 順位順にsort(比較関数作ってやる)
-        players = sorted(players, key=cmp_to_key(comp))
+        players = sorted(players, key=cmp_to_key(self.matcher.comp))
         if len(players) % 2 == 1:
             players.append({'name': "不戦勝", 'win': 0, 'lose': 100, 'stone_diff': -1000})
     
@@ -227,7 +147,7 @@ class GameManager():
                     already_battle[i][j] = 1
                     already_battle[j][i] = 1
         con.close()
-        pairs = concider_match(players_id, already_battle)
+        pairs = self.matcher.concider_match(players_id, already_battle)
         print(pairs)
 
         con = sqlite3.connect(self.DATABASE)
@@ -340,10 +260,6 @@ class GameManager():
             prev_lose = data[0][2]
             prev_stone_diff = data[0][3]
             con.execute('DELETE FROM game_result WHERE win_player = ? AND lose_player=?', [prev_win, prev_lose])
-            con.execute('UPDATE results SET win = win - 1 WHERE name = ?', [prev_win])
-            con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [prev_stone_diff, prev_win])
-            con.execute('UPDATE results SET lose = lose - 1 WHERE name = ?', [prev_lose])
-            con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [prev_stone_diff, prev_lose])
             con.execute('UPDATE now_matches SET winner = ? WHERE (player1=? AND player2 = ?) OR (player1=? AND player2 = ?)', ["PLAYING", name1, name2, name2, name1])
         con.commit()
         con.close()
@@ -379,7 +295,7 @@ class GameManager():
         for row in ranks_data:
             players.append({'name': row[0], 'win': row[1], 'lose': row[2], 'stone_diff': row[3]})
         
-        players = sorted(players, key=cmp_to_key(comp))
+        players = sorted(players, key=cmp_to_key(self.matcher.comp))
     
         for player in players:
             name = player['name']
@@ -395,7 +311,7 @@ class GameManager():
                 tmp.append(row[2])
                 tmp.append(row[3])
                 battles.append(tmp)
-            battles = sorted(battles, key=cmp_to_key(c2))
+            battles = sorted(battles, key=cmp_to_key(self.matcher.c2))
             print(battles)
     
             for row in battles:
