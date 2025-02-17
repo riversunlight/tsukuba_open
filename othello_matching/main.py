@@ -24,6 +24,11 @@ def comp(player1, player2):
             return 1
     return 1 - 2 * random.randint(0, 1)
 
+def c2(a, b):
+    if a[0] < b[0]:
+        return -1
+    else:
+        return 1
 #トップページ
 @app.route('/')
 def index():
@@ -322,6 +327,67 @@ def matching():
     con.close()
     return redirect(url_for('index'))
 
+@app.route('/fix_draw')
+def fix_draw():
+    player1 = request.args.get('player1')
+    player2 = request.args.get('player2')
+    con = sqlite3.connect(DATABASE)
+    data = con.execute('SELECT * FROM game_result WHERE (win_player = ? AND lose_player=?) OR (win_player=? AND lose_player=?)', [player1, player2, player2, player1]).fetchall()
+    round = data[0][0]
+    prev_win = data[0][1]
+    prev_lose = data[0][2]
+    stone_diff = data[0][3]
+    
+    con.close()
+    prev_data = {'winner': prev_win, 'loser': prev_lose, 'stone_diff': stone_diff}
+    return render_template(
+        'fix_draw.html',
+        player1=player1,
+        player2=player2,
+        prev_data=prev_data,
+        round=round
+    )
+    
+
+@app.route('/fix_prev_game', methods=["POST"])
+def fix_prev_game():
+    print(request.form)
+    win_name = request.form['winner']
+    round = request.form['round']
+    stone_diff = request.form['stone_diff']
+    lose_name = "?"
+    con = sqlite3.connect(DATABASE)
+    game_data = con.execute('SELECT * FROM game_result WHERE (win_player = ? OR lose_player = ?) AND round = ?', [win_name, win_name, round]).fetchall()
+    print(game_data)
+    for row in game_data:
+        if row[1]==win_name:
+            lose_name=row[2]
+        else:
+            lose_name=row[1]
+        prev_stone = row[3]
+
+    # 訂正時
+    data = con.execute('SELECT * FROM game_result WHERE (win_player = ? AND lose_player=?) OR (win_player = ? AND lose_player=?)', [win_name, lose_name, lose_name, win_name]).fetchall()
+    print(data)
+    if len(data) == 1:
+      prev_win = data[0][1]
+      prev_lose = data[0][2]
+      prev_stone_diff = data[0][3]
+      con.execute('DELETE FROM game_result WHERE win_player = ? AND lose_player=?', [prev_win, prev_lose])
+      con.execute('UPDATE results SET win = win - 1 WHERE name = ?', [prev_win])
+      con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [prev_stone_diff, prev_win])
+      con.execute('UPDATE results SET lose = lose - 1 WHERE name = ?', [prev_lose])
+      con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [prev_stone_diff, prev_lose])
+
+    con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [round, win_name, lose_name, stone_diff])
+    con.execute('UPDATE results SET win = win + 1 WHERE name = ?', [win_name])
+    con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [stone_diff, win_name])
+    con.execute('UPDATE results SET lose = lose + 1 WHERE name = ?', [lose_name])
+    con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [stone_diff, lose_name])
+    con.commit()
+    con.close()
+    return redirect(url_for('index'))
+
 @app.route('/hand_matching')
 def hand_matching():
     now_matches = []
@@ -396,6 +462,27 @@ def change_status_exe():
     con.close()
     return redirect(url_for('index'))
 
+@app.route('/delete_match')
+def delete_match():
+    name1 = request.args.get('name1')
+    name2 = request.args.get('name2')
+    con = sqlite3.connect(DATABASE)
+    data = con.execute('SELECT * FROM game_result WHERE (win_player = ? AND lose_player=?) OR (win_player = ? AND lose_player=?)', [name1, name2, name2, name1]).fetchall()
+    print(data)
+    if len(data) == 1:
+      prev_win = data[0][1]
+      prev_lose = data[0][2]
+      prev_stone_diff = data[0][3]
+      con.execute('DELETE FROM game_result WHERE win_player = ? AND lose_player=?', [prev_win, prev_lose])
+      con.execute('UPDATE results SET win = win - 1 WHERE name = ?', [prev_win])
+      con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [prev_stone_diff, prev_win])
+      con.execute('UPDATE results SET lose = lose - 1 WHERE name = ?', [prev_lose])
+      con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [prev_stone_diff, prev_lose])
+      con.execute('UPDATE game_data SET during_game = during_game + 1')
+      con.execute('UPDATE now_matches SET winner = ? WHERE (player1=? AND player2 = ?) OR (player1=? AND player2 = ?)', ["PLAYING", name1, name2, name2, name1])
+    con.commit()
+    con.close()
+    return redirect(url_for('index'))
 
 @app.route('/game_input', methods=["POST"])
 def game_input():
@@ -509,7 +596,18 @@ def outcsv():
         result_info = con.execute('SELECT * FROM results WHERE name=?', [name]).fetchall()
         battle_info = con.execute('SELECT * FROM game_result WHERE win_player=? OR lose_player=?', [name, name]).fetchall()
         battle = []
+        battles = []
         for row in battle_info:
+            tmp = []
+            tmp.append(row[0])
+            tmp.append(row[1])
+            tmp.append(row[2])
+            tmp.append(row[3])
+            battles.append(tmp)
+        battles = sorted(battles, key=cmp_to_key(c2))
+        print(battles)
+
+        for row in battles:
             win = True if row[1] == name else False
             tmp = {}
             opponent=""
@@ -546,9 +644,8 @@ def outcsv():
             write_row2 = ['', data['block'], data['grade']]
             stone_tot = 0
             for row in data['battle']:
-                stone_num = 32 + row['stone_diff'] // 2
-                stone_tot += stone_num
-                write_row1.append(row['result'] + str(stone_num))
+                stone_tot += row['stone_diff']
+                write_row1.append(row['result'] + str(row['stone_diff']))
                 write_row2.append(row['opponent'])
 
             write_row1.append(str(data['win']) + "勝" + str(data['lose']) +  "敗")

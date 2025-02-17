@@ -7,19 +7,15 @@
   </head>
   <body>
     <h1>試合結果入力</h1>
-    {% if prev_data.winner != 'NULL' %}
     <h2>前回入力</h2>
     <br />
+    ラウンド数: {{ round }} <br />
     勝者: {{prev_data.winner}}<br />
     敗者: {{prev_data.loser}}<br />
     石差: {{prev_data.stone_diff}}<br />
     <br />
-    <a
-      href="{{ url_for('delete_match', name1 = prev_data.winner, name2 = prev_data.loser )}}"
-      >削除</a
-    >
-    {% endif%}
-    <form method="post" action="{{ url_for('game_input') }}">
+
+    <form method="post" action="{{ url_for('fix_prev_game') }}">
       勝者選択<br />
       <input
         type="radio"
@@ -35,6 +31,7 @@
       /><label for="{{player2}}">{{player2}}</label><br />
       <label for="stone_diff">石差(絶対値、符号なし)</label>
       <input type="text" id="stone_diff" name="stone_diff" />
+      <input type="hidden" id="round" name="round" value="{{ round }}" />
       <input type="submit" value="登録" />
     </form>
 

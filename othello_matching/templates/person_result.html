@@ -13,6 +13,7 @@
         <th>対戦相手</th>
         <th>勝敗</th>
         <th>石差</th>
+        <th>修正</th>
       </tr>
       {% for battle in person_results%}
       <tr>
@@ -20,6 +21,12 @@
         <td>{{ battle.opponent }}</td>
         <td>{{ battle.win }}</td>
         <td>{{ battle.stone }}</td>
+        <td>
+          <a
+            href="{{ url_for('fix_draw', player1 = name, player2 = battle.opponent) }}"
+            >っ修正</a
+          >
+        </td>
       </tr>
       {% endfor %}
       <td></td>
