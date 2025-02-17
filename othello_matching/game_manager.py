@@ -59,17 +59,45 @@ class GameManager():
         _players = con.execute("SELECT * FROM players").fetchall()
         db_player = con.execute("SELECT * FROM results").fetchall()
         _match_data = con.execute("SELECT * FROM now_matches").fetchall()
+        matches_result = con.execute("SELECT * FROM game_result WHERE round = ?", [self.round]).fetchall()
+
         con.close()
         ranks = []
         now_matches = []
         no_matches = []
         end_game = 0
         players = []
+
+        winners = {}
+        losers = {}
+        for row in matches_result:
+            winner = row[1]
+            loser = row[2]
+            stone_diff = row[3]
+            winners[winner] = stone_diff
+            losers[loser] = stone_diff
+        
         for row in _players:
             players.append({'name': row[0], 'block': row[1], 'short': row[2], 'grade': row[3]})
 
         for row in db_player:
-            ranks.append({'name': row[0], 'win': row[1], 'lose': row[2], 'stone_diff': row[3], 'status': row[4]})
+            name = row[0]
+            win = row[1]
+            lose = row[2]
+            stone_diff = row[3]
+            status = row[4]
+            end_game = 0
+            if name in winners:
+                win += 1
+                stone_diff += winners[name]
+                end_game = 1
+            if name in losers:
+                lose += 1
+                stone_diff -= losers[name]
+                end_game = 1
+
+            ranks.append({'name': name, 'win': win, 'lose': lose, 'stone_diff': stone_diff, 'status': status, 'end_game': end_game})
+
         ranks = sorted(ranks, key=cmp_to_key(self.matcher.comp))
 
         game_data = [{'round': self.round, 'during_game': self.during_game}]
@@ -167,7 +195,7 @@ class GameManager():
 
         if (no_game_player != -1):
             player1 = players[no_game_player]['name']
-            con.execute('INSERT INTO game_result VALUES (?, ?, ?, ?)', [round + 1, player1, "不戦勝", 2])
+            con.execute('INSERT INTO game_result VALUES (?, ?, ?, ?)', [round, player1, "不戦勝", 2])
             con.execute("INSERT INTO now_matches VALUES (?, ?, ?)", [player1, "-", "不戦勝"])
             #con.execute('UPDATE results SET win = win + 1 WHERE name = ?', [player1])
             #con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [2, player1])

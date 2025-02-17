@@ -27,7 +27,7 @@
         <th>状態</th>
       </tr>
       {% for player in ranks %}
-      <tr>
+      <tr {% if player.end_game == 1 %} bgcolor="#aa0000" {% endif %}>
         <td>{{ player.name }}</td>
         <td>{{ player.win }}</td>
         <td>{{ player.lose }}</td>
