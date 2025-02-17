@@ -4,21 +4,12 @@ DATABASE = 'database.db'
 
 def create_players_table():
     con = sqlite3.connect(DATABASE)
-    con.execute("CREATE TABLE IF NOT EXISTS players (name, short, block, grade)")
+    con.execute("CREATE TABLE IF NOT EXISTS players (name, short, block, grade, status)")
     con.close()
 
 def create_results_table():
     con = sqlite3.connect(DATABASE)
     con.execute("CREATE TABLE IF NOT EXISTS results (name, win int, lose int, stone_diff int, status)")
-    con.close()
-
-def create_game_data_table():
-    con = sqlite3.connect(DATABASE)
-    con.execute("CREATE TABLE IF NOT EXISTS game_data (round int, during_game int)")
-    res = con.execute("SELECT * FROM game_data").fetchall()
-    if (len(res) == 0):
-        con.execute("INSERT INTO game_data VALUES(?, ?)", [0, 0])
-    con.commit()
     con.close()
 
 def create_new_matches_table():

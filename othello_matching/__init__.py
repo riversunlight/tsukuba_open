@@ -7,6 +7,5 @@ import othello_matching.main
 from othello_matching import db
 db.create_players_table()
 db.create_results_table()
-db.create_game_data_table()
 db.create_new_matches_table()
 db.create_new_game_result_table()

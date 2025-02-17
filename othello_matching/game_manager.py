@@ -1,0 +1,521 @@
+# 大会情報の管理
+import sqlite3
+import csv
+from functools import cmp_to_key
+import random
+import copy
+import time
+
+def comp(player1, player2):
+    score1 = player1['win']
+    score2 = player2['win']
+    if score1 > score2:
+        return -1
+    elif score1 < score2:
+        return 1
+    else:
+        if player1['stone_diff'] > player2['stone_diff']:
+            return -1
+        elif player1['stone_diff'] < player2['stone_diff']:
+            return 1
+    return 1 - 2 * random.randint(0, 1)
+
+def c2(a, b):
+    if a[0] < b[0]:
+        return -1
+    else:
+        return 1
+
+def matching_cost(matches, already_battle):
+    res = 0
+    C_REMATCH = 10000000
+    C_RANK = 1
+    # 不戦勝: そういう人物がいることにする!!(順位は最下位)
+    # 不戦勝っていう対戦相手と再戦するのもペナルティ
+    for i in range(0, len(matches)):
+        p1 = matches[i][0]
+        p2 = matches[i][1]
+        res += (p1 - p2) * (p1 - p2) * C_RANK
+        res += already_battle[p1][p2] * C_REMATCH
+    return res
+
+
+# タブーサーチが相性よさそう!
+# 同じ組み合わせが存在するのを部分的にでも防ぐ!!
+def concider_match(players, already_battle):
+    matches = [[2 * i + j for j in range(0, 2)] for i in range(0, len(players) // 2)]
+    best_cost = matching_cost(matches, already_battle)
+    best_matches = copy.deepcopy(matches)
+    tabu_span = 10
+    tabu_list = [[- tabu_span - 10 for i in range(0, len(players))] for j in range(0, len(players))]
+    exe_time = 1000
+    start_time = time.time()
+    search_cnt = 100000
+    # 局所最適化
+    for _ in range(0, search_cnt):
+        if time.time() - start_time > exe_time:
+            break
+        next_cost = 1000000000
+        next_matches = matches
+        # 近傍解
+        next_i = -1
+        for i in range(0, len(matches) - 1):
+            for j in range(0, 2):
+                new_match = copy.deepcopy(matches)
+                new_match[i][1], new_match[i + 1][j] = new_match[i + 1][j], new_match[i][1]
+                new_cost = matching_cost(new_match, already_battle)
+
+                if new_cost < best_cost:
+                    best_matches = new_match
+                    best_cost = new_cost
+                
+                prev_turn = max(tabu_list[new_match[i][0]][new_match[i][1]], tabu_list[new_match[i + 1][0]][new_match[i + 1][1]])
+                if _ - prev_turn < tabu_span:
+                    continue
+
+                if new_cost < next_cost:
+                    next_cost = new_cost
+                    next_matches = new_match
+                    next_i = i
+        if next_i != -1:
+            tabu_list[matches[next_i][0]][matches[next_i][1]] = _
+            tabu_list[matches[next_i][1]][matches[next_i][0]] = _
+            tabu_list[matches[next_i + 1][0]][matches[next_i + 1][1]] = _
+            tabu_list[matches[next_i + 1][1]][matches[next_i + 1][0]] = _
+        matches = copy.deepcopy(next_matches)
+        
+    return best_matches
+    
+class GameManager():
+    DATABASE = 'database.db'
+
+    def register(self, name, short, block, grade):
+        con = sqlite3.connect(self.DATABASE)
+        con.execute('INSERT INTO players VALUES(?, ?, ?, ?)', [name, short, block, grade])
+        con.commit()
+        con.close()
+
+    def delete_player(self, name):
+        con = sqlite3.connect(self.DATABASE)
+        con.execute('DELETE FROM players WHERE name = ?', [name])
+        con.execute('DELETE FROM results WHERE name = ?', [name])
+        con.commit()
+        con.close()
+
+    def game_data_no_battle(self, player1, player2):
+        con = sqlite3.connect(self.DATABASE)
+        player = player1 if player2 == '-' else player2
+
+        data = con.execute('SELECT * FROM game_result WHERE round = ? AND (win_player = ? OR lose_player = ?)', [self.round, player, player]).fetchall()
+        prev_stone = data[0][3]
+        win_lose = "不戦勝" if data[0][1] == player else "不戦敗"
+        return win_lose, prev_stone
+    
+    def person_result(self, name):
+        con = sqlite3.connect(self.DATABASE)
+        person_result_data = con.execute('SELECT * FROM game_result WHERE (win_player=? OR lose_player=?)', [name, name]).fetchall()
+        person_results = []
+        result_data = con.execute('SELECT * FROM results WHERE name=?', [name]).fetchall()
+        for row in person_result_data:
+            my_id = 1
+            tmp = {}
+            if row[2]==name:
+                my_id = 2
+            tmp["round"] = row[0]
+            tmp["opponent"] = row[((my_id - 1) ^ 1) + 1]
+            tmp["stone"] = row[3]
+            tmp["win"] = "O" if my_id == 1 else "X"
+            person_results.append(tmp)
+        for row in result_data:
+            total_win = row[1]
+            total_lose = row[2]
+            total_stone = row[3]
+        con.close()
+        return person_results, total_win, total_lose, total_stone
+    
+    def data_for_index(self):
+        con = sqlite3.connect(self.DATABASE)
+        _players = con.execute("SELECT * FROM players").fetchall()
+        db_player = con.execute("SELECT * FROM results").fetchall()
+        _match_data = con.execute("SELECT * FROM now_matches").fetchall()
+        con.close()
+        ranks = []
+        now_matches = []
+        no_matches = []
+        end_game = 0
+        players = []
+        for row in _players:
+            players.append({'name': row[0], 'block': row[1], 'short': row[2], 'grade': row[3]})
+
+        for row in db_player:
+            ranks.append({'name': row[0], 'win': row[1], 'lose': row[2], 'stone_diff': row[3], 'status': row[4]})
+        ranks = sorted(ranks, key=cmp_to_key(comp))
+
+        game_data = [{'round': self.round, 'during_game': self.during_game}]
+        
+        for row in _match_data:
+            if row[2] == "不戦勝" or row[2] == "不戦敗":
+                no_matches.append({'player1': row[0], 'player2': row[1], 'winner': row[2]})
+            else:
+                now_matches.append({'player1': row[0], 'player2': row[1], 'winner': row[2]})
+            if row[2] != "PLAYING":
+                end_game += 1
+        return players, ranks, game_data, now_matches, end_game, no_matches
+    
+    def data_for_hand(self):
+        now_matches = []
+        players = []
+        con = sqlite3.connect(self.DATABASE)
+        _match_data = con.execute("SELECT * FROM now_matches").fetchall()
+        _players = con.execute("SELECT * FROM players").fetchall()
+        for row in _match_data:
+            now_matches.append({'player1': row[0], 'player2': row[1], 'winner': row[2]})
+        for row in _players:
+            players.append({'name': row[0]})
+        con.close()
+        return now_matches, players
+    
+    def update_grades(self):
+        con = sqlite3.connect(self.DATABASE)
+        if self.round == 0:
+            players = con.execute("SELECT * FROM players").fetchall()
+            for row in players:
+                con.execute("INSERT INTO results VALUES(?, ?, ?, ?, ?)", [row[0], 0, 0, 0, "参加"])
+        else:
+            round = self.round
+            now_games = con.execute("SELECT * FROM game_result WHERE round = ?", [round]).fetchall()
+            for row in now_games:
+                winner = row[1]
+                loser = row[2]
+                stone_diff = row[3]
+                if winner != "不戦敗":
+                    con.execute('UPDATE results SET win = win + 1 WHERE name = ?', [winner])
+                    con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [stone_diff, winner])
+                if winner != "不戦勝":
+                    con.execute('UPDATE results SET lose = lose + 1 WHERE name = ?', [loser])
+                    con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [stone_diff, loser])
+        con.commit()
+        con.close()
+    
+    def matching(self):
+        self.update_grades()
+
+
+        # DBからデータを持ってきて保存
+        players = []
+        con = sqlite3.connect(self.DATABASE)
+        ranks_data = con.execute('SELECT * FROM results').fetchall()
+        for row in ranks_data:
+            print(row)
+            players.append({'name': row[0], 'win': row[1], 'lose': row[2], 'stone_diff': row[3]})
+        
+        # 順位順にsort(比較関数作ってやる)
+        players = sorted(players, key=cmp_to_key(comp))
+        if len(players) % 2 == 1:
+            players.append({'name': "不戦勝", 'win': 0, 'lose': 100, 'stone_diff': -1000})
+    
+        players_id = [0 for i in range(0, (len(players)))]
+        #ここまでの工夫で遅刻早退対応!!(入力受け取り)
+    
+        already_battle = [[0 for i in range(0, len(players_id))] for j in range(0, len(players_id))]
+        for i in range(0, len(players)):
+            for j in range(0, len(players)):
+                if players[i]['name'] == players[j]['name']:
+                    continue
+                befo_game = con.execute("SELECT * FROM game_result WHERE (win_player=? AND lose_player=?) OR (win_player=? AND lose_player=?)", [players[i]['name'], players[j]['name'], players[j]['name'], players[i]['name']]).fetchall()
+                if len(befo_game) != 0:
+                    already_battle[i][j] = 1
+                    already_battle[j][i] = 1
+        con.close()
+        pairs = concider_match(players_id, already_battle)
+        print(pairs)
+
+        con = sqlite3.connect(self.DATABASE)
+        round = self.round
+        con.execute("DELETE FROM now_matches")
+        no_game_player = -1
+        for pair in pairs:
+            player1 = players[pair[0]]['name']
+            player2 = players[pair[1]]['name']
+            if player1 == "不戦勝":
+                no_game_player = pair[1]
+                continue
+            if player2 == "不戦勝":
+                no_game_player = pair[0]
+                continue
+            con.execute("INSERT INTO now_matches VALUES(?, ?, ?)", [player1, player2, "PLAYING"])
+
+        if (no_game_player != -1):
+            player1 = players[no_game_player]['name']
+            con.execute('INSERT INTO game_result VALUES (?, ?, ?, ?)', [round + 1, player1, "不戦勝", 2])
+            con.execute("INSERT INTO now_matches VALUES (?, ?, ?)", [player1, "-", "不戦勝"])
+            #con.execute('UPDATE results SET win = win + 1 WHERE name = ?', [player1])
+            #con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [2, player1])
+    
+    
+        con.commit()
+        con.close()
+        
+    def fix_prev_game(self, win_name, round, stone_diff):
+        lose_name = "?"
+        con = sqlite3.connect(self.DATABASE)
+        game_data = con.execute('SELECT * FROM game_result WHERE (win_player = ? OR lose_player = ?) AND round = ?', [win_name, win_name, round]).fetchall()
+        for row in game_data:
+            if row[1]==win_name:
+                lose_name=row[2]
+            else:
+                lose_name=row[1]
+    
+        # 訂正時
+        data = con.execute('SELECT * FROM game_result WHERE (win_player = ? AND lose_player=?) OR (win_player = ? AND lose_player=?)', [win_name, lose_name, lose_name, win_name]).fetchall()
+        print(data)
+        if len(data) == 1:
+          prev_win = data[0][1]
+          prev_lose = data[0][2]
+          prev_stone_diff = data[0][3]
+          con.execute('DELETE FROM game_result WHERE win_player = ? AND lose_player=?', [prev_win, prev_lose])
+          if round != self.round:
+              con.execute('UPDATE results SET win = win - 1 WHERE name = ?', [prev_win])
+              con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [prev_stone_diff, prev_win])
+              con.execute('UPDATE results SET lose = lose - 1 WHERE name = ?', [prev_lose])
+              con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [prev_stone_diff, prev_lose])
+    
+        con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [round, win_name, lose_name, stone_diff])
+        
+        if round != self.round:
+            con.execute('UPDATE results SET win = win + 1 WHERE name = ?', [win_name])
+            con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [stone_diff, win_name])
+            con.execute('UPDATE results SET lose = lose + 1 WHERE name = ?', [lose_name])
+            con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [stone_diff, lose_name])
+        
+        con.commit()
+        con.close()
+
+    def fix_no_game(self, player, kind, stone_diff):
+        con = sqlite3.connect(self.DATABASE)
+        round = self.round
+        #data = con.execute('SELECT * FROM game_result WHERE round = ? AND (win_player = ? OR lose_player = ?)', [round, player, player]).fetchall()
+        #prev_win = data[0][1]
+        #prev_kind = "不戦勝" if prev_win == player else "不戦敗"
+        #prev_stone = data[0][3]
+        #if prev_kind == "不戦勝":
+        #    con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [prev_stone, player])
+        #    con.execute('UPDATE results SET win = win - 1 WHERE name = ?', [player])
+        #else:
+        #    con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [prev_stone, player])
+        #    con.execute('UPDATE results SET lose = lose - 1 WHERE name = ?', [player])
+        con.execute('DELETE FROM game_result WHERE round = ? AND (win_player = ? OR lose_player = ?)', [round, player, player]).fetchall()
+        con.execute('DELETE FROM now_matches WHERE player1 = ? OR player2 = ?', [player, player]).fetchall()
+    
+        if kind == "不戦勝":
+            #con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [stone_diff, player])
+            #con.execute('UPDATE results SET win = win + 1 WHERE name = ?', [player])
+            con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [round, player, "不戦勝", stone_diff])
+            con.execute('INSERT INTO now_matches VALUES(?, ?, ?)', [player, "-", "不戦勝"])
+        else:
+            #con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [stone_diff, player])
+            #con.execute('UPDATE results SET lose = lose + 1 WHERE name = ?', [player])
+            con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [round, "不戦敗", player, stone_diff])
+            con.execute('INSERT INTO now_matches VALUES(?, ?, ?)', [player, "-", "不戦敗"])
+        
+        con.commit()
+        con.close()
+
+    def get_game_result(self, player1, player2):
+        con = sqlite3.connect(self.DATABASE)
+        data = con.execute('SELECT * FROM game_result WHERE (win_player = ? AND lose_player=?) OR (win_player=? AND lose_player=?)', [player1, player2, player2, player1]).fetchall()
+        round = data[0][0]
+        prev_win = data[0][1]
+        prev_lose = data[0][2]
+        stone_diff = data[0][3]
+        con.close()
+        return round, {'winner': prev_win, 'loser': prev_lose, 'stone_diff': stone_diff}
+
+    def delete_match(self, name1, name2):
+        con = sqlite3.connect(self.DATABASE)
+        data = con.execute('SELECT * FROM game_result WHERE (win_player = ? AND lose_player=?) OR (win_player = ? AND lose_player=?)', [name1, name2, name2, name1]).fetchall()
+        print(data)
+        if len(data) == 1:
+            prev_win = data[0][1]
+            prev_lose = data[0][2]
+            prev_stone_diff = data[0][3]
+            con.execute('DELETE FROM game_result WHERE win_player = ? AND lose_player=?', [prev_win, prev_lose])
+            con.execute('UPDATE results SET win = win - 1 WHERE name = ?', [prev_win])
+            con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [prev_stone_diff, prev_win])
+            con.execute('UPDATE results SET lose = lose - 1 WHERE name = ?', [prev_lose])
+            con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [prev_stone_diff, prev_lose])
+            con.execute('UPDATE now_matches SET winner = ? WHERE (player1=? AND player2 = ?) OR (player1=? AND player2 = ?)', ["PLAYING", name1, name2, name2, name1])
+        con.commit()
+        con.close()
+
+    def get_status(self, name):
+        con = sqlite3.connect(self.DATABASE)
+        player = con.execute('SELECT * FROM results WHERE name=?', [name]).fetchall()
+        status = player[0][4]
+        con.close()
+        return status
+
+    def change_status_exe(self, name, status):
+        con = sqlite3.connect(self.DATABASE)
+        con.execute('UPDATE results SET status = ? WHERE name = ?', [status, name])
+        con.commit()
+        con.close()
+    
+    def reset_database(self):
+        con = sqlite3.connect(self.DATABASE)
+        con.execute('DELETE FROM players')
+        con.execute('DELETE FROM results')
+        con.execute("DELETE FROM now_matches")
+        con.execute("DELETE FROM game_result")
+        con.commit()
+        con.close()
+        
+    
+    def outcsv(self):
+        datas = []
+        players = []
+        con = sqlite3.connect(self.DATABASE)
+        ranks_data = con.execute('SELECT * FROM results').fetchall()
+        for row in ranks_data:
+            players.append({'name': row[0], 'win': row[1], 'lose': row[2], 'stone_diff': row[3]})
+        
+        players = sorted(players, key=cmp_to_key(comp))
+    
+        for player in players:
+            name = player['name']
+            player_info = con.execute('SELECT * FROM players WHERE name=?', [name]).fetchall()
+            result_info = con.execute('SELECT * FROM results WHERE name=?', [name]).fetchall()
+            battle_info = con.execute('SELECT * FROM game_result WHERE win_player=? OR lose_player=?', [name, name]).fetchall()
+            battle = []
+            battles = []
+            for row in battle_info:
+                tmp = []
+                tmp.append(row[0])
+                tmp.append(row[1])
+                tmp.append(row[2])
+                tmp.append(row[3])
+                battles.append(tmp)
+            battles = sorted(battles, key=cmp_to_key(c2))
+            print(battles)
+    
+            for row in battles:
+                win = True if row[1] == name else False
+                tmp = {}
+                opponent=""
+                if win:
+                    tmp['result'] = "〇"
+                    opponent=row[2]
+                else:
+                    tmp['result'] = "×"
+                    opponent=row[1]
+                tmp['stone_diff'] = row[3]
+                if not win:
+                    tmp['stone_diff'] *= -1
+                opponent_info = con.execute('SELECT * FROM players WHERE name=?', [opponent]).fetchall()
+                tmp['opponent'] = opponent_info[0][1]
+                battle.append(tmp)
+    
+            datas.append({'name': player['name'], 'short': player_info[0][1], 'block':player_info[0][2], 'grade': player_info[0][3], 'win': result_info[0][1], 'lose': result_info[0][2], 'stone_diff': result_info[0][3], 'battle': battle })
+    
+        con.close()
+        with open('result.csv', 'w', newline="") as f:
+            writer = csv.writer(f)
+            prev_win = 100
+            prev_stone = 600
+            rank = 0
+            id = 0
+            for data in datas:
+                id += 1
+                if prev_win != data['win'] or (prev_win == data['win'] and prev_stone != data['stone_diff']):
+                    rank = id
+                prev_win = data['win']
+                prev_stone = data['stone_diff']
+                print(prev_stone)
+                write_row1 = [str(rank) + ".", data['name'], data['short']]
+                write_row2 = ['', data['block'], data['grade']]
+                stone_tot = 0
+                for row in data['battle']:
+                    stone_tot += row['stone_diff']
+                    write_row1.append(row['result'] + str(row['stone_diff']))
+                    write_row2.append(row['opponent'])
+    
+                write_row1.append(str(data['win']) + "勝" + str(data['lose']) +  "敗")
+                write_row2.append(str(stone_tot))
+                writer.writerow(write_row1)
+                writer.writerow(write_row2)
+    
+    @property
+    def round(self):
+        con = sqlite3.connect(self.DATABASE)
+        game_result = con.execute('SELECT * FROM results').fetchall()
+        now_matches = con.execute('SELECT * FROM now_matches').fetchall()
+        for row in now_matches:
+            print(row)
+        res = 0 if len(now_matches) == 0 else 1
+        for row in game_result:
+            res = row[1] + row[2] + 1
+            break
+        con.close()
+        return res
+    
+    def now_match(self,names):
+        con = sqlite3.connect(self.DATABASE)
+        now_match = con.execute('SELECT * FROM now_matches WHERE (player1 = ? AND player2 = ?) OR (player1 = ? AND player2 = ?)', [names[0], names[1], names[1], names[0]]).fetchall()
+        con.close()
+        return now_match
+
+    def game_input(self, win_name, stone_diff):
+        round_int = 10
+        lose_name = "?"
+        con = sqlite3.connect(self.DATABASE)
+        round_int = self.round
+        game_data = con.execute('SELECT * FROM now_matches WHERE player1=? OR player2=?', [win_name, win_name]).fetchall()
+        for row in game_data:
+            if row[0]==win_name:
+                lose_name=row[1]
+            else:
+                lose_name=row[0]
+        # 訂正時
+        data = con.execute('SELECT * FROM game_result WHERE (win_player = ? AND lose_player=?) OR (win_player = ? AND lose_player=?)', [win_name, lose_name, lose_name, win_name]).fetchall()
+        print(data)
+        if len(data) == 1:
+          prev_win = data[0][1]
+          prev_lose = data[0][2]
+          prev_stone_diff = data[0][3]
+          con.execute('DELETE FROM game_result WHERE win_player = ? AND lose_player=?', [prev_win, prev_lose])
+          #con.execute('UPDATE results SET win = win - 1 WHERE name = ?', [prev_win])
+          #con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [prev_stone_diff, prev_win])
+          #con.execute('UPDATE results SET lose = lose - 1 WHERE name = ?', [prev_lose])
+          #con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [prev_stone_diff, prev_lose])
+    
+        con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [round_int, win_name, lose_name, stone_diff])
+        #con.execute('UPDATE results SET win = win + 1 WHERE name = ?', [win_name])
+        #con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [stone_diff, win_name])
+        #con.execute('UPDATE results SET lose = lose + 1 WHERE name = ?', [lose_name])
+        #con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [stone_diff, lose_name])
+        game_data = con.execute('UPDATE now_matches SET winner=? WHERE player1=? OR player2=?', [win_name, win_name, win_name])
+        con.commit()
+        con.close()
+
+    def swap_matches(self, names):
+        oppos = ["_", "__"]
+        con = sqlite3.connect(self.DATABASE)
+        for i in range(0, 2):
+            mch = con.execute("SELECT * FROM now_matches WHERE player1 = ? OR player2 = ?", [names[i], names[i]]).fetchall()
+            oppos[i] = mch[0][0] if mch[0][0] != names[i] else mch[0][1]
+
+        for i in range(0, 2):
+            con.execute("DELETE FROM now_matches WHERE (player1 = ? AND player2 = ?) OR (player1 = ? AND player2 = ?)", [names[i], oppos[i], oppos[i], names[i]])
+    
+        con.execute("INSERT INTO now_matches VALUES(?, ?, ?)", [names[0], names[1], "PLAYING"])
+        con.execute("INSERT INTO now_matches VALUES(?, ?, ?)", [oppos[0], oppos[1], "PLAYING"])
+    
+        con.commit()
+        con.close()
+
+    @property
+    def during_game(self):
+        con = sqlite3.connect(self.DATABASE)
+        during_game = con.execute('SELECT * FROM now_matches WHERE winner = ?', ["PLAYING"]).fetchall()
+        con.close()
+        return len(during_game)

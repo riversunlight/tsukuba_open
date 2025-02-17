@@ -15,6 +15,7 @@
     {% endif %}
     <hr />
 
+    {% if (game_data[0].round != 0) %}
     <h2>暫定順位表</h2>
     <table border="1">
       <tr>
@@ -24,9 +25,6 @@
         <th>石差</th>
         <th>戦績確認</th>
         <th>状態</th>
-        {% if game_data[0].round == 0 %}
-        <th>削除</th>
-        {% endif %}
       </tr>
       {% for player in ranks %}
       <tr>
@@ -44,16 +42,32 @@
             >{{ player.status }}</a
           >
         </td>
-        {% if game_data[0].round == 0 %}
-        <td>
-          <a href="{{url_for('delete_player', name=player.name)}}">削除</a>
-        </td>
-        {% endif %}
       </tr>
       {% endfor %}
     </table>
-
-    {% if game_data[0].round != 0 %}
+    {% else %}
+    <h2>選手名簿</h2>
+    <table border="1">
+      <tr>
+        <th>名前</th>
+        <th>状態</th>
+        <th>削除</th>
+      </tr>
+      {% for player in players %}
+      <tr>
+        <td>{{ player.name }}</td>
+        <td>
+          <a href="{{ url_for('change_status', name=player.name)}}"
+            >{{ player.status }}</a
+          >
+        </td>
+        <td>
+          <a href="{{url_for('delete_player', name=player.name)}}">削除</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% endif %} {% if game_data[0].round != 0 %}
     <h2>対戦カード</h2>
     残り試合数 {{ game_data[0].during_game }}<br />
     {% for match in now_matches %}
