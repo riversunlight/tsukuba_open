@@ -150,7 +150,6 @@ class GameManager():
         if self.round == 0:
             return True
         now_matches = con.execute("SELECT * FROM game_result WHERE round = ?", [round]).fetchall()
-        # TODO: そのラウンドの試合がすべて終わったかの判定
         res = True
         cnt = 0
         for row in now_matches:
@@ -163,7 +162,6 @@ class GameManager():
         return res
     
     def matching(self):
-        # TODO: そのラウンドの試合が終わってなければ、不戦勝と不戦敗を取り出して再マッチング
         if self.is_game_end():
             self.update_grades()
         else:
@@ -243,7 +241,6 @@ class GameManager():
     
         # 訂正時
         data = con.execute('SELECT * FROM game_result WHERE (win_player = ? AND lose_player=?) OR (win_player = ? AND lose_player=?)', [win_name, lose_name, lose_name, win_name]).fetchall()
-        print(data)
         if len(data) == 1:
           prev_win = data[0][1]
           prev_lose = data[0][2]
@@ -268,29 +265,14 @@ class GameManager():
 
     def fix_no_game(self, player, kind, stone_diff):
         con = sqlite3.connect(self.DATABASE)
-        round = self.round
-        #data = con.execute('SELECT * FROM game_result WHERE round = ? AND (win_player = ? OR lose_player = ?)', [round, player, player]).fetchall()
-        #prev_win = data[0][1]
-        #prev_kind = "不戦勝" if prev_win == player else "不戦敗"
-        #prev_stone = data[0][3]
-        #if prev_kind == "不戦勝":
-        #    con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [prev_stone, player])
-        #    con.execute('UPDATE results SET win = win - 1 WHERE name = ?', [player])
-        #else:
-        #    con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [prev_stone, player])
-        #    con.execute('UPDATE results SET lose = lose - 1 WHERE name = ?', [player])
-        con.execute('DELETE FROM game_result WHERE round = ? AND (win_player = ? OR lose_player = ?)', [round, player, player]).fetchall()
+        con.execute('DELETE FROM game_result WHERE round = ? AND (win_player = ? OR lose_player = ?)', [self.round, player, player]).fetchall()
         con.execute('DELETE FROM now_matches WHERE player1 = ? OR player2 = ?', [player, player]).fetchall()
     
         if kind == "不戦勝":
-            #con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [stone_diff, player])
-            #con.execute('UPDATE results SET win = win + 1 WHERE name = ?', [player])
-            con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [round, player, "不戦勝", stone_diff])
+            con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [self.round, player, "不戦勝", stone_diff])
             con.execute('INSERT INTO now_matches VALUES(?, ?, ?)', [player, "-", "不戦勝"])
         else:
-            #con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [stone_diff, player])
-            #con.execute('UPDATE results SET lose = lose + 1 WHERE name = ?', [player])
-            con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [round, "不戦敗", player, stone_diff])
+            con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [self.round, "不戦敗", player, stone_diff])
             con.execute('INSERT INTO now_matches VALUES(?, ?, ?)', [player, "-", "不戦敗"])
         
         con.commit()
@@ -309,7 +291,6 @@ class GameManager():
     def delete_match(self, name1, name2):
         con = sqlite3.connect(self.DATABASE)
         data = con.execute('SELECT * FROM game_result WHERE (win_player = ? AND lose_player=?) OR (win_player = ? AND lose_player=?)', [name1, name2, name2, name1]).fetchall()
-        print(data)
         if len(data) == 1:
             prev_win = data[0][1]
             prev_lose = data[0][2]
@@ -367,7 +348,6 @@ class GameManager():
                 tmp.append(row[3])
                 battles.append(tmp)
             battles = sorted(battles, key=cmp_to_key(self.matcher.c2))
-            print(battles)
     
             for row in battles:
                 win = True if row[1] == name else False
@@ -401,7 +381,6 @@ class GameManager():
                     rank = id
                 prev_win = data['win']
                 prev_stone = data['stone_diff']
-                print(prev_stone)
                 write_row1 = [str(rank) + ".", data['name'], data['short']]
                 write_row2 = ['', data['block'], data['grade']]
                 stone_tot = 0
@@ -447,22 +426,13 @@ class GameManager():
                 lose_name=row[0]
         # 訂正時
         data = con.execute('SELECT * FROM game_result WHERE (win_player = ? AND lose_player=?) OR (win_player = ? AND lose_player=?)', [win_name, lose_name, lose_name, win_name]).fetchall()
-        print(data)
         if len(data) == 1:
-          prev_win = data[0][1]
-          prev_lose = data[0][2]
-          prev_stone_diff = data[0][3]
-          con.execute('DELETE FROM game_result WHERE win_player = ? AND lose_player=?', [prev_win, prev_lose])
-          #con.execute('UPDATE results SET win = win - 1 WHERE name = ?', [prev_win])
-          #con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [prev_stone_diff, prev_win])
-          #con.execute('UPDATE results SET lose = lose - 1 WHERE name = ?', [prev_lose])
-          #con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [prev_stone_diff, prev_lose])
-    
+            prev_win = data[0][1]
+            prev_lose = data[0][2]
+            prev_stone_diff = data[0][3]
+            con.execute('DELETE FROM game_result WHERE win_player = ? AND lose_player=?', [prev_win, prev_lose])
+
         con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [round_int, win_name, lose_name, stone_diff])
-        #con.execute('UPDATE results SET win = win + 1 WHERE name = ?', [win_name])
-        #con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [stone_diff, win_name])
-        #con.execute('UPDATE results SET lose = lose + 1 WHERE name = ?', [lose_name])
-        #con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [stone_diff, lose_name])
         game_data = con.execute('UPDATE now_matches SET winner=? WHERE player1=? OR player2=?', [win_name, win_name, win_name])
         con.commit()
         con.close()

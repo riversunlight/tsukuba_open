@@ -61,7 +61,6 @@ def fix_game():
         )
     else:
         round, prev_data = gm.get_game_result(player1, player2)
-        print(prev_data)
         return render_template(
             'game_input.html',
             player1=player1,
@@ -278,7 +277,6 @@ def api_game_input():
 @app.route('/api/person_result')
 def api_person_result():
     name = request.args.get('name')
-    print(name)
     person_results, total_win, total_lose, total_stone = gm.person_result(name)
     res = {
         'person_results': person_results,
