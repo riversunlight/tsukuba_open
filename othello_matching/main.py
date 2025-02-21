@@ -1,9 +1,11 @@
 from othello_matching import app
-from flask import render_template, request, redirect, url_for
+from flask import render_template, request, redirect, url_for, jsonify
 from .game_manager import GameManager
+import json
 
 gm = GameManager()
 
+# === デバッグ用 ===
 #トップページ
 @app.route('/')
 def index():
@@ -163,7 +165,6 @@ def delete_match():
 
 @app.route('/game_input', methods=["POST"])
 def game_input():
-    print(request.form)
     win_name = request.form['winner']
     stone_diff = request.form['stone_diff']
     gm.game_input(win_name, stone_diff)
@@ -196,3 +197,103 @@ def reset():
 def outcsv():
     gm.outcsv()
     return redirect(url_for('index'))
+
+
+# === フロントエンド用API ===
+
+@app.route('/api/index')
+def api_index():
+    players, ranks, game_data, now_matches, end_game, no_matches = gm.data_for_index()
+    res = {
+        'players': players,
+        'ranks': ranks,
+        'game_data': game_data,
+        'now_matches': now_matches,
+        'end_game': end_game,
+        'no_matches': no_matches
+    }
+    return jsonify(res), 200
+
+@app.route('/api/register', methods=['POST'])
+def api_register():
+    name = request.form['name']
+    short = request.form['short']
+    block = request.form['block']
+    grade = request.form['grade']
+    gm.register(name, short, block, grade)
+    res = {
+        'status': 'ok'
+    }
+    return jsonify(res), 200
+
+@app.route('/api/matching')
+def api_matching():
+    gm.matching()
+    res = {'status': 'ok'}
+    return jsonify(res), 200
+
+@app.route('/api/fix_prev_game', methods = ['POST'])
+def api_fix_prev_game():
+    win_name = request.form['winner']
+    round = request.form['round']
+    stone_diff = request.form['stone_diff']
+    gm.fix_prev_game(win_name, round, stone_diff)
+    res = {'status': 'ok'}
+    return jsonify(res), 200
+
+@app.route('/api/swap_match', methods = ["POST"])
+def api_swap_match():
+    names = ["_", "__"]
+    names[0] = request.form['name1']
+    names[1] = request.form['name2']
+
+    now_match = gm.now_match(names)
+    if len(now_match) != 0:
+        return jsonify({"status": "Please Delete Now Game Result"}), 401
+    if names[0] != names[1]:
+        gm.swap_matches(names)
+    return jsonify({"status": "ok"}), 200
+
+@app.route('/api/change_status')
+def api_change_status():
+    name = request.form['name']
+    status = request.form['status']
+    gm.change_status_exe(name, status)
+    return jsonify({"status": "ok"}), 200
+
+@app.route('/api/delete_match')
+def api_delte_match():
+    name1 = request.args.get('name1')
+    name2 = request.args.get('name2')
+    gm.delete_match(name1, name2)
+    return jsonify({'status': 'ok'}), 200
+
+@app.route('/api/game_input', methods=["POST"])
+def api_game_input():
+    win_name = request.form['winner']
+    stone_diff = request.form['stone_diff']
+    gm.game_input(win_name, stone_diff)
+    return jsonify({'status': 'ok'}), 200
+
+@app.route('/api/person_result')
+def api_person_result():
+    name = request.args.get('name')
+    print(name)
+    person_results, total_win, total_lose, total_stone = gm.person_result(name)
+    res = {
+        'person_results': person_results,
+        'total_win': total_win,
+        'total_lose': total_lose,
+        'total_stone': total_stone
+    }
+    return jsonify(res), 200
+
+@app.route('/api/reset')
+def reset():
+    gm.reset_database()
+    return jsonify({'status': 'ok'}), 200
+
+@app.route('/api/outcsv')
+def outcsv():
+    gm.outcsv()
+    return jsonify({'status': 'ok'}), 200
