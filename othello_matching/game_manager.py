@@ -5,7 +5,6 @@ from functools import cmp_to_key
 
 from .matcher import Matcher
 
-    
 class GameManager():
     DATABASE = 'database.db'
     matcher = Matcher()
@@ -86,29 +85,28 @@ class GameManager():
             lose = row[2]
             stone_diff = row[3]
             status = row[4]
-            end_game = 0
+            finish_game = 0
             if name in winners:
                 win += 1
                 stone_diff += winners[name]
-                end_game = 1
+                finish_game = 1
             if name in losers:
                 lose += 1
                 stone_diff -= losers[name]
-                end_game = 1
+                finish_game = 1
 
-            ranks.append({'name': name, 'win': win, 'lose': lose, 'stone_diff': stone_diff, 'status': status, 'end_game': end_game})
+            ranks.append({'name': name, 'win': win, 'lose': lose, 'stone_diff': stone_diff, 'status': status, 'end_game': finish_game})
 
         ranks = sorted(ranks, key=cmp_to_key(self.matcher.comp))
 
         game_data = [{'round': self.round, 'during_game': self.during_game}]
-        
         for row in _match_data:
             if row[2] == "不戦勝" or row[2] == "不戦敗":
                 no_matches.append({'player1': row[0], 'player2': row[1], 'winner': row[2]})
             else:
                 now_matches.append({'player1': row[0], 'player2': row[1], 'winner': row[2]})
-            if row[2] != "PLAYING":
-                end_game += 1
+                if row[2] != "PLAYING":
+                    end_game += 1
         return players, ranks, game_data, now_matches, end_game, no_matches
     
     def data_for_hand(self):
@@ -145,17 +143,46 @@ class GameManager():
                     con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [stone_diff, loser])
         con.commit()
         con.close()
+
+    def is_game_end(self):
+        con = sqlite3.connect(self.DATABASE)
+        round = self.round
+        if self.round == 0:
+            return True
+        now_matches = con.execute("SELECT * FROM game_result WHERE round = ?", [round]).fetchall()
+        # TODO: そのラウンドの試合がすべて終わったかの判定
+        res = True
+        cnt = 0
+        for row in now_matches:
+            if not (row[1] == "不戦勝" or row[1] == "不戦敗" or row[2] == "不戦勝" or row[3] == "不戦敗"):
+                cnt += 1
+
+        if cnt == 0:
+            res = False
+        con.close()
+        return res
     
     def matching(self):
-        self.update_grades()
-
+        # TODO: そのラウンドの試合が終わってなければ、不戦勝と不戦敗を取り出して再マッチング
+        if self.is_game_end():
+            self.update_grades()
+        else:
+            con = sqlite3.connect(self.DATABASE)
+            con.execute('DELETE FROM game_result WHERE round = ?', [self.round])
+            con.commit()
+            con.close()
 
         # DBからデータを持ってきて保存
         players = []
+        no_players = []
         con = sqlite3.connect(self.DATABASE)
         ranks_data = con.execute('SELECT * FROM results').fetchall()
         for row in ranks_data:
-            players.append({'name': row[0], 'win': row[1], 'lose': row[2], 'stone_diff': row[3]})
+            name, win, lose, stone_diff, status = row
+            if status == "参加":
+                players.append({'name': name, 'win': win, 'lose': lose, 'stone_diff': stone_diff})
+            else:
+                no_players.append(name)
         
         # 順位順にsort(比較関数作ってやる)
         players = sorted(players, key=cmp_to_key(self.matcher.comp))
@@ -176,7 +203,6 @@ class GameManager():
                     already_battle[j][i] = 1
         con.close()
         pairs = self.matcher.concider_match(players_id, already_battle)
-        print(pairs)
 
         con = sqlite3.connect(self.DATABASE)
         round = self.round
@@ -197,9 +223,10 @@ class GameManager():
             player1 = players[no_game_player]['name']
             con.execute('INSERT INTO game_result VALUES (?, ?, ?, ?)', [round, player1, "不戦勝", 2])
             con.execute("INSERT INTO now_matches VALUES (?, ?, ?)", [player1, "-", "不戦勝"])
-            #con.execute('UPDATE results SET win = win + 1 WHERE name = ?', [player1])
-            #con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [2, player1])
-    
+
+        for name in no_players:
+            con.execute('INSERT INTO game_result VALUES (?, ?, ?, ?)', [round, "不戦敗", name, 64])
+            con.execute("INSERT INTO now_matches VALUES(?, ?, ?)", [player1, "-", "不戦敗"])
     
         con.commit()
         con.close()
@@ -393,8 +420,7 @@ class GameManager():
         con = sqlite3.connect(self.DATABASE)
         game_result = con.execute('SELECT * FROM results').fetchall()
         now_matches = con.execute('SELECT * FROM now_matches').fetchall()
-        for row in now_matches:
-            print(row)
+        
         res = 0 if len(now_matches) == 0 else 1
         for row in game_result:
             res = row[1] + row[2] + 1

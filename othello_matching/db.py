@@ -4,7 +4,7 @@ DATABASE = 'database.db'
 
 def create_players_table():
     con = sqlite3.connect(DATABASE)
-    con.execute("CREATE TABLE IF NOT EXISTS players (name, short, block, grade, status)")
+    con.execute("CREATE TABLE IF NOT EXISTS players (name, short, block, grade)")
     con.close()
 
 def create_results_table():
