@@ -287,11 +287,11 @@ def api_person_result():
     return jsonify(res), 200
 
 @app.route('/api/reset')
-def reset():
+def api_reset():
     gm.reset_database()
     return jsonify({'status': 'ok'}), 200
 
 @app.route('/api/outcsv')
-def outcsv():
+def api_outcsv():
     gm.outcsv()
     return jsonify({'status': 'ok'}), 200
