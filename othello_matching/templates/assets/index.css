@@ -1,0 +1,14 @@
+#logo {
+    font-family: 'Arial Black', sans-serif;
+    font-size: 48px;
+    color: white;
+    background-color: #008000;
+    padding: 20px 40px;
+    border-radius: 10px;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    display: inline-block;
+    margin: 20px auto;
+}
