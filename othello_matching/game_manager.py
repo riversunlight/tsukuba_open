@@ -77,7 +77,7 @@ class GameManager():
             losers[loser] = stone_diff
         
         for row in _players:
-            players.append({'name': row[0], 'block': row[1], 'short': row[2], 'grade': row[3]})
+            players.append({'name': row[0], 'short': row[1], 'block': row[2], 'grade': row[3]})
 
         for row in db_player:
             name = row[0]
