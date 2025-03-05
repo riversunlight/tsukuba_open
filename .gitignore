@@ -1,3 +1,6 @@
 *.db
 *.csv
-**/__pycache__/**
+**/**/*.pyc
+*.spec
+dist
+build
