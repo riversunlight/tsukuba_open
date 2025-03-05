@@ -168,11 +168,6 @@
               <td>{{ player.short }}</td>
               <td>{{ player.block }}</td>
               <td>{{ player.grade }}</td>
-              <td>
-              <a href="{{ url_for('change_status', name=player.name)}}"
-                >{{ player.status }}</a
-              >
-              </td>
             </tr>
             {% endfor %}
         </table>
