@@ -15,7 +15,7 @@
 
 /* battle */
 #battle {
-    flex: 7.5; /* 8:2の比率で広くする */
+    flex: 7;
 }
 
 .register-button {
@@ -36,7 +36,6 @@
     transform: scale(1.05);
 }
 
-/* モーダルのスタイル */
 .modal {
     display: none;
     position: fixed;
@@ -81,9 +80,75 @@
 
 
 
-
+/* ranking_table */
 
 #ranking {
-    flex: 2.5; /* 8:2の比率で狭くする */
-    background-color: lightcoral; /* 確認用 */
+    flex: 3;
+}
+
+.ranking_title {
+    text-align: center;
+}
+
+/* テーブル全体のスタイル */
+.player-table {
+    width: 100%;
+    border-collapse: collapse; /* 二重線をなくす */
+    margin-top: 20px;
+    background-color: #fff8e1; /* パステルイエロー系の背景 */
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* ヘッダーのデザイン */
+.player-table th {
+    background-color: #ffccbc; /* パステルオレンジ */
+    color: #444;
+    padding: 12px;
+    text-align: left;
+    font-size: 16px;
+    border-bottom: 2px solid #ffab91;
+}
+
+/* データ行のデザイン */
+.player-table td {
+    padding: 12px;
+    border-bottom: 1px solid #ffe0b2;
+}
+
+/* 偶数行の背景色を変えて見やすくする */
+.player-table tr:nth-child(even) {
+    background-color: #fff3e0; /* パステルオレンジの淡い色 */
+}
+
+/* マウスホバー時のハイライト */
+.player-table tr:hover {
+    background-color: #ffe0b2;
+    transition: 0.3s ease-in-out;
+}
+
+/* リンクのデザイン */
+.player-table a {
+    text-decoration: none;
+    color: #007bff; /* ブルー系 */
+    font-weight: bold;
+    padding: 5px 10px;
+    border-radius: 5px;
+    transition: background-color 0.2s ease-in-out;
+}
+
+/* ステータスリンク */
+.player-table a:hover {
+    background-color: rgba(0, 123, 255, 0.2);
+}
+
+/* 削除ボタンのデザイン */
+.delete-button {
+    color: #ff3d00; /* 赤系 */
+    font-weight: bold;
+}
+
+.delete-button:hover {
+    background-color: rgba(255, 61, 0, 0.2);
 }

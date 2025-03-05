@@ -123,7 +123,7 @@
       <div id="ranking">
         <!--ここに画面右側-->
         {% if (game_data[0].round != 0) %}
-        <h2>暫定順位表</h2>
+        <h2 class="ranking_title">暫定順位表</h2>
         <table border="1">
           <tr>
             <th>名前</th>
@@ -153,26 +153,22 @@
           {% endfor %}
         </table>
         {% else %}
-        <h2>選手名簿</h2>
-        <table border="1">
-          <tr>
-            <th>名前</th>
-            <th>状態</th>
-            <th>削除</th>
-          </tr>
-          {% for player in players %}
-          <tr>
-            <td>{{ player.name }}</td>
-            <td>
-              <a href="{{ url_for('change_status', name=player.name)}}"
-                >{{ player.status }}</a
-              >
-            </td>
-            <td>
-              <a href="{{url_for('delete_player', name=player.name)}}">削除</a>
-            </td>
-          </tr>
-          {% endfor %}
+          <h2 class="ranking_title">選手名簿</h2>
+          <table class="player-table">
+            <tr>
+                <th>名前</th>
+                <th>略称</th>
+                <th>都道府県</th>
+                <th>段級位</th>
+            </tr>
+            {% for player in players %}
+            <tr>
+              <td>{{ player.name }}</td>
+              <td>{{ player.short }}</td>
+              <td>{{ player.block }}</td>
+              <td>{{ player.grade }}</td>
+            </tr>
+            {% endfor %}
         </table>
         {% endif %}
       </div>
