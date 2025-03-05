@@ -115,6 +115,7 @@
 .player-table td {
     padding: 12px;
     border-bottom: 1px solid #ffe0b2;
+    cursor: pointer;
 }
 
 /* 偶数行の背景色を変えて見やすくする */
@@ -126,29 +127,4 @@
 .player-table tr:hover {
     background-color: #ffe0b2;
     transition: 0.3s ease-in-out;
-}
-
-/* リンクのデザイン */
-.player-table a {
-    text-decoration: none;
-    color: #007bff; /* ブルー系 */
-    font-weight: bold;
-    padding: 5px 10px;
-    border-radius: 5px;
-    transition: background-color 0.2s ease-in-out;
-}
-
-/* ステータスリンク */
-.player-table a:hover {
-    background-color: rgba(0, 123, 255, 0.2);
-}
-
-/* 削除ボタンのデザイン */
-.delete-button {
-    color: #ff3d00; /* 赤系 */
-    font-weight: bold;
-}
-
-.delete-button:hover {
-    background-color: rgba(255, 61, 0, 0.2);
 }

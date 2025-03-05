@@ -162,7 +162,7 @@
                 <th>段級位</th>
             </tr>
             {% for player in players %}
-            <tr>
+            <tr class="player_data" data-url="{{ url_for('add_player', name=player.name) }}"><!--ここのページは後で作成-->
               <td>{{ player.name }}</td>
               <td>{{ player.short }}</td>
               <td>{{ player.block }}</td>
@@ -170,6 +170,20 @@
             </tr>
             {% endfor %}
         </table>
+        <script>
+          document.addEventListener("DOMContentLoaded", function() {
+            let rows = document.querySelectorAll(".player_data");
+
+            rows.forEach(row => {
+              row.addEventListener("click", function() {
+                let url = row.getAttribute("data-url");
+                if (url) {
+                    window.location.href = url;
+                }
+              });
+            });
+          });
+        </script>
         {% endif %}
       </div>
     </div>
