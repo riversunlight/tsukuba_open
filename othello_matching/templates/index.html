@@ -13,10 +13,12 @@
       <div id="battle">
         <!--ここに画面左側-->
         {% if (game_data[0].round == 0) %}
-        <h2>~開始準備中~</h2>
-        <button class="register-button" onclick="openModal()">選手登録</button>
-
-        <div id="registerModal" class="modal">
+          <h2>~開始準備中~</h2>
+          <button class="register-button" onclick="openModal()">選手登録</button>
+          <button id="tmp" onclick="startMatching()">マッチング開始</button>
+  
+          <!--選手登録ウィンドウ-->
+          <div id="registerModal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal()">&times;</span>
                 <h2>選手登録</h2>
@@ -105,19 +107,40 @@
                     <input type="submit" value="登録" class="submit-button" />
                 </form>
             </div>
-        </div>
+          </div>
+  
+          <script>
+              function openModal() {
+                  document.getElementById("registerModal").style.display = "block";
+              }
+  
+              function closeModal() {
+                  document.getElementById("registerModal").style.display = "none";
+              }
 
-        <script>
-            function openModal() {
-                document.getElementById("registerModal").style.display = "block";
-            }
+              async function startMatching() {
+                const apiUrl = 'http://127.0.0.1:5000/matching';
+                const element = document.getElementById( 'battle' );
+                
+                try {
+                    const response = await fetch(apiUrl);
 
-            function closeModal() {
-                document.getElementById("registerModal").style.display = "none";
-            }
-        </script>
+                    location.reload();
+                } catch (error) {
+                    element.textContent = `error: ${error.message}`;
+                }
+              }
+          </script>
+        
         {% else %}
-        <h2>~第{{ game_data[0].round }}回戦~</h2>
+          <h2>~第{{ game_data[0].round }}回戦~</h2>
+          {% for player in now_matches %}
+            <div class="battleCard">
+              <input type="radio" id="player1" name="winner">
+              <p>VS</p>
+              <input type="radio" id="player2" name="winner">
+            </div>
+          {% endfor %}
         {% endif %}
       </div>
       <div id="ranking">
