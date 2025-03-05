@@ -11,7 +11,7 @@ class GameManager():
 
     def register(self, name, short, block, grade):
         con = sqlite3.connect(self.DATABASE)
-        con.execute('INSERT INTO players VALUES(?, ?, ?, ?)', [name, short, block, grade])
+        con.execute('INSERT INTO players VALUES(?, ?, ?, ?, ?)', [name, short, block, grade, "参加"])
         con.commit()
         con.close()
 
@@ -56,7 +56,7 @@ class GameManager():
     def data_for_index(self):
         con = sqlite3.connect(self.DATABASE)
         _players = con.execute("SELECT * FROM players").fetchall()
-        db_player = con.execute("SELECT * FROM results").fetchall()
+        db_player = con.execute("SELECT results.name, results.win, results.lose, results.stone_diff, players.status FROM results JOIN players ON results.name = players.name").fetchall()
         _match_data = con.execute("SELECT * FROM now_matches").fetchall()
         matches_result = con.execute("SELECT * FROM game_result WHERE round = ?", [self.round]).fetchall()
 
@@ -77,7 +77,7 @@ class GameManager():
             losers[loser] = stone_diff
         
         for row in _players:
-            players.append({'name': row[0], 'short': row[1], 'block': row[2], 'grade': row[3]})
+            players.append({'name': row[0], 'short': row[1], 'block': row[2], 'grade': row[3], 'status': row[4]})
 
         for row in db_player:
             name = row[0]
@@ -127,7 +127,7 @@ class GameManager():
         if self.round == 0:
             players = con.execute("SELECT * FROM players").fetchall()
             for row in players:
-                con.execute("INSERT INTO results VALUES(?, ?, ?, ?, ?)", [row[0], 0, 0, 0, "参加"])
+                con.execute("INSERT INTO results VALUES(?, ?, ?, ?)", [row[0], 0, 0, 0])
         else:
             round = self.round
             now_games = con.execute("SELECT * FROM game_result WHERE round = ?", [round]).fetchall()
@@ -302,14 +302,14 @@ class GameManager():
 
     def get_status(self, name):
         con = sqlite3.connect(self.DATABASE)
-        player = con.execute('SELECT * FROM results WHERE name=?', [name]).fetchall()
+        player = con.execute('SELECT * FROM players WHERE name=?', [name]).fetchall()
         status = player[0][4]
         con.close()
         return status
 
     def change_status_exe(self, name, status):
         con = sqlite3.connect(self.DATABASE)
-        con.execute('UPDATE results SET status = ? WHERE name = ?', [status, name])
+        con.execute('UPDATE players SET status = ? WHERE name = ?', [status, name])
         con.commit()
         con.close()
     

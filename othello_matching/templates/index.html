@@ -160,6 +160,7 @@
                 <th>略称</th>
                 <th>都道府県</th>
                 <th>段級位</th>
+                <th>状態</th>
             </tr>
             {% for player in players %}
             <tr class="player_data" data-url="{{ url_for('add_player', name=player.name) }}"><!--ここのページは後で作成-->
@@ -167,6 +168,11 @@
               <td>{{ player.short }}</td>
               <td>{{ player.block }}</td>
               <td>{{ player.grade }}</td>
+              <td>
+              <a href="{{ url_for('change_status', name=player.name)}}"
+                >{{ player.status }}</a
+              >
+              </td>
             </tr>
             {% endfor %}
         </table>

@@ -4,12 +4,12 @@ DATABASE = 'database.db'
 
 def create_players_table():
     con = sqlite3.connect(DATABASE)
-    con.execute("CREATE TABLE IF NOT EXISTS players (name, short, block, grade)")
+    con.execute("CREATE TABLE IF NOT EXISTS players (name, short, block, grade, status)")
     con.close()
 
 def create_results_table():
     con = sqlite3.connect(DATABASE)
-    con.execute("CREATE TABLE IF NOT EXISTS results (name, win int, lose int, stone_diff int, status)")
+    con.execute("CREATE TABLE IF NOT EXISTS results (name, win int, lose int, stone_diff int)")
     con.close()
 
 def create_new_matches_table():
