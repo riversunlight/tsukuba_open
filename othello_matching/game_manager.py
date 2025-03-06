@@ -2,25 +2,20 @@
 import sqlite3
 import csv
 from functools import cmp_to_key
-
+from othello_matching.player import PlayerModel
 from .matcher import Matcher
 
 class GameManager():
-    DATABASE = 'database.db'
     matcher = Matcher()
+    player_model = PlayerModel()
+    DATABASE = 'database.db'
+
 
     def register(self, name, short, block, grade):
-        con = sqlite3.connect(self.DATABASE)
-        con.execute('INSERT INTO players VALUES(?, ?, ?, ?, ?)', [name, short, block, grade, "参加"])
-        con.commit()
-        con.close()
+        self.player_model.add(name, short, block, grade)
 
     def delete_player(self, name):
-        con = sqlite3.connect(self.DATABASE)
-        con.execute('DELETE FROM players WHERE name = ?', [name])
-        con.execute('DELETE FROM results WHERE name = ?', [name])
-        con.commit()
-        con.close()
+        self.player_model.add(name)
 
     def game_data_no_battle(self, player1, player2):
         con = sqlite3.connect(self.DATABASE)
@@ -55,7 +50,7 @@ class GameManager():
     
     def data_for_index(self):
         con = sqlite3.connect(self.DATABASE)
-        _players = con.execute("SELECT * FROM players").fetchall()
+        players = self.player_model.all()
         db_player = con.execute("SELECT results.name, results.win, results.lose, results.stone_diff, players.status FROM results JOIN players ON results.name = players.name").fetchall()
         _match_data = con.execute("SELECT * FROM now_matches").fetchall()
         matches_result = con.execute("SELECT * FROM game_result WHERE round = ?", [self.round]).fetchall()
@@ -65,7 +60,6 @@ class GameManager():
         now_matches = []
         no_matches = []
         end_game = 0
-        players = []
 
         winners = {}
         losers = {}
@@ -76,9 +70,6 @@ class GameManager():
             winners[winner] = stone_diff
             losers[loser] = stone_diff
         
-        for row in _players:
-            players.append({'name': row[0], 'short': row[1], 'block': row[2], 'grade': row[3], 'status': row[4]})
-
         for row in db_player:
             name = row[0]
             win = row[1]
@@ -114,20 +105,20 @@ class GameManager():
         players = []
         con = sqlite3.connect(self.DATABASE)
         _match_data = con.execute("SELECT * FROM now_matches").fetchall()
-        _players = con.execute("SELECT * FROM players").fetchall()
+        _players = self.player_model.all()
         for row in _match_data:
             now_matches.append({'player1': row[0], 'player2': row[1], 'winner': row[2]})
-        for row in _players:
-            players.append({'name': row[0]})
+        for player in _players:
+            players.append({'name': player.name})
         con.close()
         return now_matches, players
     
     def update_grades(self):
         con = sqlite3.connect(self.DATABASE)
         if self.round == 0:
-            players = con.execute("SELECT * FROM players").fetchall()
-            for row in players:
-                con.execute("INSERT INTO results VALUES(?, ?, ?, ?)", [row[0], 0, 0, 0])
+            players = self.player_model.all()
+            for player in players:
+                con.execute("INSERT INTO results VALUES(?, ?, ?, ?)", [player.name, 0, 0, 0])
         else:
             round = self.round
             now_games = con.execute("SELECT * FROM game_result WHERE round = ?", [round]).fetchall()
@@ -174,7 +165,7 @@ class GameManager():
         players = []
         no_players = []
         con = sqlite3.connect(self.DATABASE)
-        ranks_data = con.execute('SELECT * FROM results').fetchall()
+        ranks_data = con.execute('SELECT results.name, results.win, results.lose, results.stone_diff, players.status FROM results JOIN players ON results.name = players.name').fetchall()
         for row in ranks_data:
             name, win, lose, stone_diff, status = row
             if status == "参加":
