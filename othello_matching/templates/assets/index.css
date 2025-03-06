@@ -162,6 +162,13 @@
 
 .battleCard {
 
+    padding-block: 10px;
+
+    #vs-text {
+        margin-left: 20px;
+        margin-right: 20px;
+    }
+
     input[type="radio"] {
         display: none;
     }
@@ -169,21 +176,25 @@
     /* 対戦カードのデフォルトスタイル (初期状態: スカイブルー) */
     input[type="radio"] + label {
         display: inline-block;
-        padding: 10px 20px;
-        border: 2px solid #d7d7d7;
-        border-radius: 20px;
+        padding: 10px 100px;
+        border: 2px solid;
+        border-radius: 20px;        
         cursor: pointer;
         transition: all 0.3s;
-        background-color: #74b9ff; /* デフォルト (初期状態) */
-        color: #34495e; /* 文字色 (見やすいダークグレー) */
+    }
+
+    input[type="radio"]:nth-of-type( 1 ) + label {
+        margin-left: auto;
+    }
+    input[type="radio"]:nth-of-type( 2 ) + label {
+        margin-right: auto;
     }
 
     /* 勝者 (選択された場合のスタイル: ゴールド) */
     input[type="radio"]:checked + label {
-        background-color: #2ecc71; /* 勝者: ゴールド */
+        background-color: #2ecc71;
         color: white;
         border-color: #27ae60;
-        font-weight: bold;
     }
 
     /* 敗者 (非選択状態: ライトグレー) */

@@ -140,7 +140,7 @@
             <input type="radio" id="player1_{{ loop.index0 }}" name="winner_{{ loop.index0 }}" value="{{ player['player1'] }}">
             <label for="player1_{{ loop.index0 }}">{{ player['player1'] }}</label>
 
-            <p class="vs-text">VS</p>
+            <p id="vs-text">VS</p>
             
             <input type="radio" id="player2_{{ loop.index0 }}" name="winner_{{ loop.index0 }}" value="{{ player['player2'] }}">
             <label for="player2_{{ loop.index0 }}">{{ player['player2'] }}</label>
@@ -149,6 +149,7 @@
           </div>
         {% endfor %}
         <button id="rematching-button" onclick="reMatching()">次の試合へ</button>
+        <button id="finishmatching-button" onclick="finishMatching()">マッチング終了</button>
 
         <script>
             async function reMatching() {
@@ -210,6 +211,9 @@
                 } catch (error) {
                   element.textContent = `error: ${error.message}`;
                 }
+            }
+            async function finishMatching() {
+
             }
         </script>
       {% endif %}
