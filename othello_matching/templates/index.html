@@ -15,7 +15,7 @@
         {% if (game_data[0].round == 0) %}
           <h2>~開始準備中~</h2>
           <button class="register-button" onclick="openModal()">選手登録</button>
-          <button id="tmp" onclick="startMatching()">マッチング開始</button>
+          <button id="start-matching-button" onclick="startMatching()">マッチング開始</button>
   
           <!--選手登録ウィンドウ-->
           <div id="registerModal" class="modal">
@@ -133,15 +133,86 @@
           </script>
         
         {% else %}
-          <h2>~第{{ game_data[0].round }}回戦~</h2>
-          {% for player in now_matches %}
-            <div class="battleCard">
-              <input type="radio" id="player1" name="winner">
-              <p>VS</p>
-              <input type="radio" id="player2" name="winner">
-            </div>
-          {% endfor %}
-        {% endif %}
+        <h2>~第{{ game_data[0].round }}回戦~</h2>
+        <h3>↓　勝った方のカードをクリック　↓</h3>
+        {% for player in now_matches %}
+          <div class="battleCard">
+            <input type="radio" id="player1_{{ loop.index0 }}" name="winner_{{ loop.index0 }}" value="{{ player['player1'] }}">
+            <label for="player1_{{ loop.index0 }}">{{ player['player1'] }}</label>
+
+            <p class="vs-text">VS</p>
+            
+            <input type="radio" id="player2_{{ loop.index0 }}" name="winner_{{ loop.index0 }}" value="{{ player['player2'] }}">
+            <label for="player2_{{ loop.index0 }}">{{ player['player2'] }}</label>
+
+            <input type="text" class="stone-diff" name="stone-diff" placeholder="石差を入力">
+          </div>
+        {% endfor %}
+        <button id="rematching-button" onclick="reMatching()">次の試合へ</button>
+
+        <script>
+            async function reMatching() {
+              const apiUrl = 'http://127.0.0.1:5000/game_input';
+              const element = document.getElementById( 'battle' );
+
+              const battleCards = document.getElementsByClassName( 'battleCard' );
+
+              for ( const card of battleCards ) {
+                if ( card.querySelector('input[type="radio"]:checked')?.value === undefined ) {
+                  alert( "勝敗が入力されていない対戦カードがあります" );
+                  return;
+                }
+
+                const stone_diff = Number( card.querySelector( 'input[type="text"]' )?.value )
+                if( stone_diff === undefined ) {
+                  alert( "石数が見入力の対戦カードがあります" );
+                  return;
+                }
+
+                if( !( 0 <= stone_diff && stone_diff <= 64 && stone_diff % 2 === 0 && Number.isInteger( stone_diff ) ) ) {
+                  alert( "石数は0以上64以下の偶数でなければいけません" );
+                  return;
+                }
+              }
+
+              for ( const card of battleCards ) {
+                const winner = card.querySelector( 'input[type="radio"]:checked' )?.value;
+                const stone_diff = card.querySelector( 'input[type="text"]' )?.value;
+
+                const data = {
+                  winner: winner,
+                  stone_diff: stone_diff
+                };
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: new URLSearchParams( data ).toString(),
+                    });
+
+                    if (!response.ok) {
+                        console.error(`APIエラー: ${response.statusText}`);
+                    } else {
+                        console.log(`送信成功: ${JSON.stringify(data)}`);
+                    }
+                } catch (error) {
+                    console.error(`送信失敗: ${error.message}`);
+                }
+              }
+
+              try {
+                  const response = await fetch("http://127.0.0.1:5000/matching");
+
+                  location.reload();
+                } catch (error) {
+                  element.textContent = `error: ${error.message}`;
+                }
+            }
+        </script>
+      {% endif %}
       </div>
       <div id="ranking">
         <!--ここに画面右側-->

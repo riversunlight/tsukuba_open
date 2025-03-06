@@ -152,3 +152,50 @@
 .delete-button:hover {
     background-color: rgba(255, 61, 0, 0.2);
 }
+
+/* 対戦カード */
+.battleCard {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.battleCard {
+
+    input[type="radio"] {
+        display: none;
+    }
+
+    /* 対戦カードのデフォルトスタイル (初期状態: スカイブルー) */
+    input[type="radio"] + label {
+        display: inline-block;
+        padding: 10px 20px;
+        border: 2px solid #d7d7d7;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s;
+        background-color: #74b9ff; /* デフォルト (初期状態) */
+        color: #34495e; /* 文字色 (見やすいダークグレー) */
+    }
+
+    /* 勝者 (選択された場合のスタイル: ゴールド) */
+    input[type="radio"]:checked + label {
+        background-color: #2ecc71; /* 勝者: ゴールド */
+        color: white;
+        border-color: #27ae60;
+        font-weight: bold;
+    }
+
+    /* 敗者 (非選択状態: ライトグレー) */
+    input[type="radio"]:not(:checked) + label {
+        background-color: #bdc3c7; /* 敗者: ライトグレー */
+        color: #34495e;
+        border-color: #95a5a6;
+    }
+
+    /* ホバー時のエフェクト */
+    input[type="radio"] + label:hover {
+        border-color: #2980b9;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+}
