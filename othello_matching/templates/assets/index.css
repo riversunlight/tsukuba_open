@@ -15,7 +15,7 @@
 
 /* battle */
 #battle {
-    flex: 7;
+    width: 70%;
 }
 
 .register-button {
@@ -83,7 +83,7 @@
 /* ranking_table */
 
 #ranking {
-    flex: 3;
+    width: 30%;
 }
 
 .ranking_title {
@@ -162,11 +162,21 @@
 
 .battleCard {
 
+    width: calc(100% - 30px);
     padding-block: 10px;
+    background-color: #f3f3f3;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1), 0 12px 24px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin: 5px 15px;
 
     #vs-text {
-        margin-left: 20px;
-        margin-right: 20px;
+        margin-inline: 20px;
+    }
+
+    input[type="text"] {
+
+        border: none;
+        margin: 5px 15px;
     }
 
     input[type="radio"] {
