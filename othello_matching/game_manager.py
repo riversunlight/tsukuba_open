@@ -174,7 +174,7 @@ class GameManager():
         players = []
         no_players = []
         con = sqlite3.connect(self.DATABASE)
-        ranks_data = con.execute('SELECT * FROM results').fetchall()
+        ranks_data = con.execute('SELECT results.name, results.win, results.lose, results.stone_diff, players.status FROM results JOIN players ON results.name = players.name').fetchall()
         for row in ranks_data:
             name, win, lose, stone_diff, status = row
             if status == "参加":
