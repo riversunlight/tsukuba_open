@@ -130,6 +130,10 @@
                     element.textContent = `error: ${error.message}`;
                 }
               }
+
+              async function reMatching() {
+                const apiUrl = 'http://127.0.0.1:5000/matching';
+              }
           </script>
         
         {% else %}
@@ -149,7 +153,9 @@
           </div>
         {% endfor %}
         <button id="rematching-button" onclick="reMatching()">次の試合へ</button>
-        <button id="finishmatching-button" onclick="finishMatching()">マッチング終了</button>
+        <button id="startover-button" onclick="startOverMatching()">マッチングをやり直す</button>
+
+        <!--<button id="finishmatching-button" onclick="finishMatching()">マッチング終了</button>-->
 
         <script>
             async function reMatching() {
@@ -213,6 +219,19 @@
                   element.textContent = `error: ${error.message}`;
                 }
             }
+
+            async function startOverMatching() {
+              const apiUrl = 'http://127.0.0.1:5000/game_input';
+        
+              try {
+                  const response = await fetch("http://127.0.0.1:5000/matching");
+
+                  location.reload();
+                } catch (error) {
+                  element.textContent = `error: ${error.message}`;
+                }
+            }
+
             async function finishMatching() {
 
             }
@@ -267,6 +286,11 @@
               <td>{{ player.short }}</td>
               <td>{{ player.block }}</td>
               <td>{{ player.grade }}</td>
+              <td>
+              <a href="{{ url_for('change_status', name=player.name)}}"
+                >{{ player.status }}</a
+              >
+              </td>
             </tr>
             {% endfor %}
         </table>

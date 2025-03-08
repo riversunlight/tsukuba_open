@@ -11,9 +11,7 @@
     <form method="post" action="{{ url_for('change_status_exe') }}">
       <select name="status">
         <option value="参加">参加</option>
-        <option value="遅刻">遅刻</option>
-        <option value="中抜け">中抜け</option>
-        <option value="早退">早退</option>
+        <option value="不参加">不参加</option>
       </select>
       <input type="hidden" name="name" value="{{name}}" />
       <input type="submit" value="変更" />
