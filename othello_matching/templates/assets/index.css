@@ -163,6 +163,7 @@
 .battleCard {
 
     width: calc(100% - 30px);
+    align-items: center;
     padding-block: 10px;
     background-color: #f3f3f3;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1), 0 12px 24px rgba(0, 0, 0, 0.1);
@@ -171,12 +172,18 @@
 
     #vs-text {
         margin-inline: 20px;
+        font-size: 24px;
     }
 
     input[type="text"] {
 
+        width: 150px;
+        padding: 10px 30px;
+        text-align: center;
+        font-size: 24px;
         border: none;
-        margin: 5px 15px;
+        margin-block: 5px;
+        margin-right: auto;
     }
 
     input[type="radio"] {
@@ -185,7 +192,9 @@
 
     /* 対戦カードのデフォルトスタイル (初期状態: スカイブルー) */
     input[type="radio"] + label {
-        display: inline-block;
+        display: flex;
+        align-items: center;
+        font-size: 32px;
         padding: 10px 100px;
         border: 2px solid;
         border-radius: 20px;        
@@ -197,7 +206,7 @@
         margin-left: auto;
     }
     input[type="radio"]:nth-of-type( 2 ) + label {
-        margin-right: auto;
+        margin-right: 30px;
     }
 
     /* 勝者 (選択された場合のスタイル: ゴールド) */
