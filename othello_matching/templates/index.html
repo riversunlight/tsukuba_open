@@ -164,11 +164,12 @@
                   return;
                 }
 
-                const stone_diff = Number( card.querySelector( 'input[type="text"]' )?.value )
-                if( stone_diff === undefined ) {
-                  alert( "石数が見入力の対戦カードがあります" );
+                if( card.querySelector( 'input[type="text"]' )?.value.trim() === "" ) {
+                  alert( "石数が未入力の対戦カードがあります" );
                   return;
                 }
+
+                const stone_diff = Number( card.querySelector( 'input[type="text"]' )?.value )
 
                 if( !( 0 <= stone_diff && stone_diff <= 64 && stone_diff % 2 === 0 && Number.isInteger( stone_diff ) ) ) {
                   alert( "石数は0以上64以下の偶数でなければいけません" );
