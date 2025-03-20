@@ -46,7 +46,7 @@ class Matcher:
         tabu_list = [[- tabu_span - 10 for i in range(0, len(players))] for j in range(0, len(players))]
         exe_time = 1000
         start_time = time.time()
-        search_cnt = 100000
+        search_cnt = 10000
         # 局所最適化
         for _ in range(0, search_cnt):
             if time.time() - start_time > exe_time:
