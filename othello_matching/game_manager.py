@@ -130,12 +130,8 @@ class GameManager():
                 stone_diff = row[3]
                 if winner != "不戦敗":
                     self.result_model.update_data(winner, True, stone_diff)
-                    #con.execute('UPDATE results SET win = win + 1 WHERE name = ?', [winner])
-                    #con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [stone_diff, winner])
                 if loser != "不戦勝":
                     self.result_model.update_data(loser, False, stone_diff)
-                    #con.execute('UPDATE results SET lose = lose + 1 WHERE name = ?', [loser])
-                    #con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [stone_diff, loser])
         con.commit()
         con.close()
 
