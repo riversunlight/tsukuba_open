@@ -32,7 +32,7 @@ class GameManager():
         con = sqlite3.connect(self.DATABASE)
         person_result_data = con.execute('SELECT * FROM game_result WHERE (win_player=? OR lose_player=?)', [name, name]).fetchall()
         person_results = []
-        result_data = self.result_model.person_data(name)#con.execute('SELECT * FROM results WHERE name=?', [name]).fetchall()
+        result_data = self.result_model.person_data(name)
         for row in person_result_data:
             my_id = 1
             tmp = {}
