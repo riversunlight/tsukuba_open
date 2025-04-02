@@ -2,7 +2,7 @@
 import sqlite3
 import csv
 from functools import cmp_to_key
-from othello_matching.player import PlayerModel
+from othello_matching.model.player import PlayerModel
 from .matcher import Matcher
 
 class GameManager():
@@ -118,7 +118,7 @@ class GameManager():
         if self.round == 0:
             players = self.player_model.all()
             for player in players:
-                con.execute("INSERT INTO results VALUES(?, ?, ?, ?)", [player.name, 0, 0, 0])
+                con.execute("INSERT INTO results VALUES(?, ?, ?, ?)", [player["name"], 0, 0, 0])
         else:
             round = self.round
             now_games = con.execute("SELECT * FROM game_result WHERE round = ?", [round]).fetchall()
