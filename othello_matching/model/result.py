@@ -15,7 +15,7 @@ class ResultModel():
     
     def person_data(self, name):
         con = sqlite3.connect(self.DATABASE)
-        data = con.execute("SELECT * FROM results WHERE name = ?", [name])
+        data = con.execute("SELECT * FROM results WHERE name = ?", [name]).fetchall()[0]
         con.close()
 
         return {'name': data[0], 'win': data[1], 'lose': data[2], 'stone_diff': data[3]}

@@ -3,11 +3,13 @@ import sqlite3
 import csv
 from functools import cmp_to_key
 from othello_matching.model.player import PlayerModel
+from othello_matching.model.result import ResultModel
 from .matcher import Matcher
 
 class GameManager():
     matcher = Matcher()
     player_model = PlayerModel()
+    result_model = ResultModel()
     DATABASE = 'database.db'
 
 
@@ -30,7 +32,7 @@ class GameManager():
         con = sqlite3.connect(self.DATABASE)
         person_result_data = con.execute('SELECT * FROM game_result WHERE (win_player=? OR lose_player=?)', [name, name]).fetchall()
         person_results = []
-        result_data = con.execute('SELECT * FROM results WHERE name=?', [name]).fetchall()
+        result_data = self.result_model.person_data(name)#con.execute('SELECT * FROM results WHERE name=?', [name]).fetchall()
         for row in person_result_data:
             my_id = 1
             tmp = {}
@@ -41,10 +43,10 @@ class GameManager():
             tmp["stone"] = row[3]
             tmp["win"] = "O" if my_id == 1 else "X"
             person_results.append(tmp)
-        for row in result_data:
-            total_win = row[1]
-            total_lose = row[2]
-            total_stone = row[3]
+        total_win = result_data["win"]
+        total_lose = result_data["lose"]
+        total_stone = result_data["stone_diff"]
+        
         con.close()
         return person_results, total_win, total_lose, total_stone
     
