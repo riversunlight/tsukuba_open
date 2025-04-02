@@ -120,7 +120,7 @@ class GameManager():
         if self.round == 0:
             players = self.player_model.all()
             for player in players:
-                con.execute("INSERT INTO results VALUES(?, ?, ?, ?)", [player["name"], 0, 0, 0])
+                self.result_model.add(player["name"])
         else:
             round = self.round
             now_games = con.execute("SELECT * FROM game_result WHERE round = ?", [round]).fetchall()
@@ -129,11 +129,13 @@ class GameManager():
                 loser = row[2]
                 stone_diff = row[3]
                 if winner != "不戦敗":
-                    con.execute('UPDATE results SET win = win + 1 WHERE name = ?', [winner])
-                    con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [stone_diff, winner])
-                if winner != "不戦勝":
-                    con.execute('UPDATE results SET lose = lose + 1 WHERE name = ?', [loser])
-                    con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [stone_diff, loser])
+                    self.result_model.update_data(winner, True, stone_diff)
+                    #con.execute('UPDATE results SET win = win + 1 WHERE name = ?', [winner])
+                    #con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [stone_diff, winner])
+                if loser != "不戦勝":
+                    self.result_model.update_data(loser, False, stone_diff)
+                    #con.execute('UPDATE results SET lose = lose + 1 WHERE name = ?', [loser])
+                    #con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [stone_diff, loser])
         con.commit()
         con.close()
 
@@ -162,6 +164,7 @@ class GameManager():
             con.execute('DELETE FROM game_result WHERE round = ?', [self.round])
             con.commit()
             con.close()
+
 
         # DBからデータを持ってきて保存
         players = []
@@ -218,7 +221,7 @@ class GameManager():
         for name in no_players:
             con.execute('INSERT INTO game_result VALUES (?, ?, ?, ?)', [round, "不戦敗", name, 64])
             con.execute("INSERT INTO now_matches VALUES(?, ?, ?)", [player1, "-", "不戦敗"])
-    
+        
         con.commit()
         con.close()
         
@@ -390,7 +393,8 @@ class GameManager():
         now_matches = con.execute('SELECT * FROM now_matches').fetchall()
         
         res = 0 if len(now_matches) == 0 else 1
-        res = game_result[0]['win'] + game_result[1]['lose']
+        if len(game_result) >= 1:
+            res = game_result[0]['win'] + game_result[0]['lose'] + 1
         con.close()
         return res
     

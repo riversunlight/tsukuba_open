@@ -43,6 +43,7 @@ class ResultModel():
         con.close()
     
     def add(self, name):
+        print("add")
         con = sqlite3.connect(self.DATABASE)
         con.execute('INSERT INTO results VALUES(?, ?, ?, ?)', [name, 0, 0, 0])
         con.commit()
