@@ -16,8 +16,11 @@ class PlayerModel():
         con.commit()
         con.close()
 
-    def get_status(self, name):
-        pass
+    def get_player_data(self, name):
+        con = sqlite3.connect(self.DATABASE)
+        data = con.execute('SELECT * FROM players WHERE name = ?', [name]).fetchall()
+        con.close()
+        return {'name': data[0][0], 'short': data[0][1], 'block': data[0][2], 'grade': data[0][3], 'status': data[0][4]}
 
     def all(self):
         con = sqlite3.connect(self.DATABASE)

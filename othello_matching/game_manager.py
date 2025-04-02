@@ -294,11 +294,7 @@ class GameManager():
         con.close()
 
     def get_status(self, name):
-        con = sqlite3.connect(self.DATABASE)
-        player = con.execute('SELECT * FROM players WHERE name=?', [name]).fetchall()
-        status = player[0][4]
-        con.close()
-        return status
+        return self.player_model.get_player_data(name)['status']
 
     def change_status_exe(self, name, status):
         con = sqlite3.connect(self.DATABASE)
@@ -320,16 +316,16 @@ class GameManager():
         datas = []
         players = []
         con = sqlite3.connect(self.DATABASE)
-        ranks_data = con.execute('SELECT * FROM results').fetchall()
+        ranks_data = self.result_model.all()
         for row in ranks_data:
-            players.append({'name': row[0], 'win': row[1], 'lose': row[2], 'stone_diff': row[3]})
+            players.append(row)
         
         players = sorted(players, key=cmp_to_key(self.matcher.comp))
     
         for player in players:
             name = player['name']
-            player_info = con.execute('SELECT * FROM players WHERE name=?', [name]).fetchall()
-            result_info = con.execute('SELECT * FROM results WHERE name=?', [name]).fetchall()
+            player_info = self.player_model.get_player_data(name)
+            result_info = self.result_model.person_data(name)
             battle_info = con.execute('SELECT * FROM game_result WHERE win_player=? OR lose_player=?', [name, name]).fetchall()
             battle = []
             battles = []
@@ -358,8 +354,8 @@ class GameManager():
                 opponent_info = con.execute('SELECT * FROM players WHERE name=?', [opponent]).fetchall()
                 tmp['opponent'] = opponent_info[0][1]
                 battle.append(tmp)
-    
-            datas.append({'name': player['name'], 'short': player_info[0][1], 'block':player_info[0][2], 'grade': player_info[0][3], 'win': result_info[0][1], 'lose': result_info[0][2], 'stone_diff': result_info[0][3], 'battle': battle })
+
+            datas.append({'name': player['name'], 'short': player_info['short'], 'block':player_info['block'], 'grade': player_info['grade'], 'win': result_info['win'], 'lose': result_info['lose'], 'stone_diff': result_info['stone_diff'], 'battle': battle })
     
         con.close()
         with open('result.csv', 'w', newline="") as f:
@@ -390,13 +386,11 @@ class GameManager():
     @property
     def round(self):
         con = sqlite3.connect(self.DATABASE)
-        game_result = con.execute('SELECT * FROM results').fetchall()
+        game_result = self.result_model.all()
         now_matches = con.execute('SELECT * FROM now_matches').fetchall()
         
         res = 0 if len(now_matches) == 0 else 1
-        for row in game_result:
-            res = row[1] + row[2] + 1
-            break
+        res = game_result[0]['win'] + game_result[1]['lose']
         con.close()
         return res
     
