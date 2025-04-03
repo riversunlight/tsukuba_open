@@ -31,3 +31,9 @@ class PlayerModel():
         for row in data:
             res.append({'name': row[0], 'short': row[1], 'block': row[2], 'grade': row[3], 'status': row[4]})
         return res
+    
+    def change_status(self, name, status):
+        con = sqlite3.connect(self.DATABASE)
+        con.execute('UPDATE players SET status = ? WHERE name = ?', [status, name])
+        con.commit()
+        con.close()

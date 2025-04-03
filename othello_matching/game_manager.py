@@ -296,10 +296,7 @@ class GameManager():
         return self.player_model.get_player_data(name)['status']
 
     def change_status_exe(self, name, status):
-        con = sqlite3.connect(self.DATABASE)
-        con.execute('UPDATE players SET status = ? WHERE name = ?', [status, name])
-        con.commit()
-        con.close()
+        self.player_model.change_status(name, status)
     
     def reset_database(self):
         con = sqlite3.connect(self.DATABASE)
