@@ -238,22 +238,19 @@ class GameManager():
           prev_lose = data[0][2]
           prev_stone_diff = data[0][3]
           con.execute('DELETE FROM game_result WHERE win_player = ? AND lose_player=?', [prev_win, prev_lose])
+          con.commit()
+          con.close()
           if round != self.round:
-              con.execute('UPDATE results SET win = win - 1 WHERE name = ?', [prev_win])
-              con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [prev_stone_diff, prev_win])
-              con.execute('UPDATE results SET lose = lose - 1 WHERE name = ?', [prev_lose])
-              con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [prev_stone_diff, prev_lose])
-    
+              self.result_model.fix_data(prev_win, True, prev_stone_diff)
+              self.result_model.fix_data(prev_lose, False, prev_stone_diff)
+        con = sqlite3.connect(self.DATABASE)
         con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [round, win_name, lose_name, stone_diff])
-        
-        if round != self.round:
-            con.execute('UPDATE results SET win = win + 1 WHERE name = ?', [win_name])
-            con.execute('UPDATE results SET stone_diff = stone_diff + ? WHERE name = ?', [stone_diff, win_name])
-            con.execute('UPDATE results SET lose = lose + 1 WHERE name = ?', [lose_name])
-            con.execute('UPDATE results SET stone_diff = stone_diff - ? WHERE name = ?', [stone_diff, lose_name])
-        
         con.commit()
         con.close()
+        if round != self.round:
+            self.result_model.update_data(win_name, True, stone_diff)
+            self.result_model.update_data(lose_name, False, stone_diff)
+        
 
     def fix_no_game(self, player, kind, stone_diff):
         con = sqlite3.connect(self.DATABASE)
@@ -347,8 +344,8 @@ class GameManager():
                 tmp['stone_diff'] = row[3]
                 if not win:
                     tmp['stone_diff'] *= -1
-                opponent_info = con.execute('SELECT * FROM players WHERE name=?', [opponent]).fetchall()
-                tmp['opponent'] = opponent_info[0][1]
+                opponent_info = self.player_model.get_player_data(opponent)
+                tmp['opponent'] = opponent_info['name']
                 battle.append(tmp)
 
             datas.append({'name': player['name'], 'short': player_info['short'], 'block':player_info['block'], 'grade': player_info['grade'], 'win': result_info['win'], 'lose': result_info['lose'], 'stone_diff': result_info['stone_diff'], 'battle': battle })
