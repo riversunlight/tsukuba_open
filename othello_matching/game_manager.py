@@ -15,9 +15,6 @@ class GameManager():
     now_match_model = NowMatchModel()
     game_result_model = GameResultModel()
 
-    DATABASE = 'database.db'
-
-
     def register(self, name, short, block, grade):
         self.player_model.add(name, short, block, grade)
 
@@ -50,9 +47,6 @@ class GameManager():
     
     def data_for_index(self):
         players = self.player_model.all()
-        con = sqlite3.connect(self.DATABASE)
-        db_player = con.execute("SELECT results.name, results.win, results.lose, results.stone_diff, players.status FROM results JOIN players ON results.name = players.name").fetchall()
-        con.close()
         _match_data = self.now_match_model.all()
         matches_result = self.game_result_model.now_games(self.round)
 
@@ -70,12 +64,15 @@ class GameManager():
             winners[winner] = stone_diff
             losers[loser] = stone_diff
         
-        for row in db_player:
-            name = row[0]
-            win = row[1]
-            lose = row[2]
-            stone_diff = row[3]
-            status = row[4]
+        for player_data in players:
+            name = player_data['name']
+            person_result = self.result_model.person_data(name)
+            if person_result == None:
+                continue
+            win = person_result['win']
+            lose = person_result['lose']
+            stone_diff = person_result['stone_diff']
+            status = player_data['status']
             finish_game = 0
             if name in winners:
                 win += 1
@@ -154,11 +151,15 @@ class GameManager():
         # DBからデータを持ってきて保存
         players = []
         no_players = []
-        con = sqlite3.connect(self.DATABASE)
-        ranks_data = con.execute('SELECT results.name, results.win, results.lose, results.stone_diff, players.status FROM results JOIN players ON results.name = players.name').fetchall()
-        con.close()
+        ranks_data = self.result_model.all()        
+
         for row in ranks_data:
-            name, win, lose, stone_diff, status = row
+            name = row['name']
+            win = row['win']
+            lose = row['lose']
+            stone_diff = row['stone_diff']
+            data = self.player_model.get_player_data(name)
+            status = data['status']
             if status == "参加":
                 players.append({'name': name, 'win': win, 'lose': lose, 'stone_diff': stone_diff})
             else:
