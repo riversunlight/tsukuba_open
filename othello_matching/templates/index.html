@@ -12,7 +12,7 @@
     <div class="container">
       <div id="battle">
         <!--ここに画面左側-->
-        {% if (game_data[0].round == 0) %}
+        {% if (game_data.round == 0) %}
           <h2>~開始準備中~</h2>
           <button class="register-button" onclick="openModal()">選手登録</button>
           <button id="start-matching-button" onclick="startMatching()">マッチング開始</button>
@@ -137,7 +137,7 @@
           </script>
         
         {% else %}
-        <h2>~第{{ game_data[0].round }}回戦~</h2>
+        <h2>~第{{ game_data.round }}回戦~</h2>
         <h3>↓　勝った方のカードをクリック　↓</h3>
         {% for player in now_matches %}
           <div class="battleCard">
@@ -240,7 +240,7 @@
       </div>
       <div id="ranking">
         <!--ここに画面右側-->
-        {% if (game_data[0].round != 0) %}
+        {% if (game_data.round != 0) %}
         <h2 class="ranking_title">暫定順位表</h2>
         <table class="player-table"  >
           <tr>

@@ -87,7 +87,7 @@ class GameManager():
 
         ranks = sorted(ranks, key=cmp_to_key(self.matcher.comp))
 
-        game_data = [{'round': self.round, 'during_game': self.during_game}]
+        game_data = {'round': self.round, 'during_game': self.during_game}
         for row in _match_data:
             if row[2] == "不戦勝" or row[2] == "不戦敗":
                 no_matches.append({'player1': row[0], 'player2': row[1], 'winner': row[2]})
