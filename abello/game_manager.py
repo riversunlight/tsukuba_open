@@ -2,10 +2,10 @@
 import sqlite3
 import csv
 from functools import cmp_to_key
-from othello_matching.model.player import PlayerModel
-from othello_matching.model.result import ResultModel
-from othello_matching.model.now_matche import NowMatchModel
-from othello_matching.model.game_result import GameResultModel
+from abello.model.player import PlayerModel
+from abello.model.result import ResultModel
+from abello.model.now_matche import NowMatchModel
+from abello.model.game_result import GameResultModel
 from .matcher import Matcher
 
 class GameManager():
