@@ -60,3 +60,9 @@ class GameResultModel():
         con.execute('DELETE FROM game_result WHERE round = ? AND (win_player = ? OR lose_player = ?)', [round, player, player]).fetchall()
         con.commit()
         con.close()
+
+    def reset(self):
+        con = sqlite3.connect(self.DATABASE)
+        con.execute("DELETE FROM game_result")
+        con.commit()
+        con.close()

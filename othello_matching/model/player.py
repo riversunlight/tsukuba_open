@@ -37,3 +37,9 @@ class PlayerModel():
         con.execute('UPDATE players SET status = ? WHERE name = ?', [status, name])
         con.commit()
         con.close()
+    
+    def reset(self):
+        con = sqlite3.connect(self.DATABASE)
+        con.execute("DELETE FROM players")
+        con.commit()
+        con.close()

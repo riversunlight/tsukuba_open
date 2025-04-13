@@ -268,14 +268,10 @@ class GameManager():
         self.player_model.change_status(name, status)
     
     def reset_database(self):
-        con = sqlite3.connect(self.DATABASE)
-        con.execute('DELETE FROM players')
-        con.execute('DELETE FROM results')
-        con.execute("DELETE FROM now_matches")
-        con.execute("DELETE FROM game_result")
-        con.commit()
-        con.close()
-        
+        self.player_model.reset()
+        self.result_model.reset()
+        self.now_match_model.reset()
+        self.game_result_model.reset()
     
     def outcsv(self):
         datas = []

@@ -77,3 +77,10 @@ class NowMatchModel():
         game_data = con.execute('SELECT * FROM now_matches WHERE player1=? OR player2=?', [name, name]).fetchall()
         con.close()
         return game_data
+    
+    def reset(self):
+        con = sqlite3.connect(self.DATABASE)
+        con.execute("DELETE FROM now_matches")
+        con.commit()
+        con.close()
+        

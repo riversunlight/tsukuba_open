@@ -47,3 +47,9 @@ class ResultModel():
         con.execute('INSERT INTO results VALUES(?, ?, ?, ?)', [name, 0, 0, 0])
         con.commit()
         con.close()
+
+    def reset(self):
+        con = sqlite3.connect(self.DATABASE)
+        con.execute("DELETE FROM results")
+        con.commit()
+        con.close()
