@@ -1,6 +1,6 @@
 from othello_matching import app
 from flask import render_template, request, redirect, url_for, jsonify
-from .game_manager import GameManager
+from othello_matching.game_manager import GameManager
 import json
 
 gm = GameManager()
