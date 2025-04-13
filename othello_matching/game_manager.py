@@ -5,6 +5,7 @@ from functools import cmp_to_key
 from othello_matching.model.player import PlayerModel
 from othello_matching.model.result import ResultModel
 from othello_matching.model.now_matche import NowMatchModel
+from othello_matching.model.game_result import GameResultModel
 from .matcher import Matcher
 
 class GameManager():
@@ -12,6 +13,8 @@ class GameManager():
     player_model = PlayerModel()
     result_model = ResultModel()
     now_match_model = NowMatchModel()
+    game_result_model = GameResultModel()
+
     DATABASE = 'database.db'
 
 
@@ -22,17 +25,11 @@ class GameManager():
         self.player_model.add(name)
 
     def game_data_no_battle(self, player1, player2):
-        con = sqlite3.connect(self.DATABASE)
-        player = player1 if player2 == '-' else player2
-
-        data = con.execute('SELECT * FROM game_result WHERE round = ? AND (win_player = ? OR lose_player = ?)', [self.round, player, player]).fetchall()
-        prev_stone = data[0][3]
-        win_lose = "不戦勝" if data[0][1] == player else "不戦敗"
-        return win_lose, prev_stone
+        return self.game_result_model.game_no_battle(player1, player2)
     
     def person_result(self, name):
-        con = sqlite3.connect(self.DATABASE)
-        person_result_data = con.execute('SELECT * FROM game_result WHERE (win_player=? OR lose_player=?)', [name, name]).fetchall()
+        person_result_data = self.game_result_model.person_game_result(name)
+
         person_results = []
         result_data = self.result_model.person_data(name)
         for row in person_result_data:
@@ -49,17 +46,16 @@ class GameManager():
         total_lose = result_data["lose"]
         total_stone = result_data["stone_diff"]
         
-        con.close()
         return person_results, total_win, total_lose, total_stone
     
     def data_for_index(self):
-        con = sqlite3.connect(self.DATABASE)
         players = self.player_model.all()
+        con = sqlite3.connect(self.DATABASE)
         db_player = con.execute("SELECT results.name, results.win, results.lose, results.stone_diff, players.status FROM results JOIN players ON results.name = players.name").fetchall()
-        _match_data = self.now_match_model.all()
-        matches_result = con.execute("SELECT * FROM game_result WHERE round = ?", [self.round]).fetchall()
-
         con.close()
+        _match_data = self.now_match_model.all()
+        matches_result = self.game_result_model.now_games(self.round)
+
         ranks = []
         now_matches = []
         no_matches = []
@@ -118,14 +114,13 @@ class GameManager():
         return now_matches, players
     
     def update_grades(self):
-        con = sqlite3.connect(self.DATABASE)
         if self.round == 0:
             players = self.player_model.all()
             for player in players:
                 self.result_model.add(player["name"])
         else:
             round = self.round
-            now_games = con.execute("SELECT * FROM game_result WHERE round = ?", [round]).fetchall()
+            now_games = self.game_result_model.now_games(round)
             for row in now_games:
                 winner = row[1]
                 loser = row[2]
@@ -134,15 +129,12 @@ class GameManager():
                     self.result_model.update_data(winner, True, stone_diff)
                 if loser != "不戦勝":
                     self.result_model.update_data(loser, False, stone_diff)
-        con.commit()
-        con.close()
 
     def is_game_end(self):
-        con = sqlite3.connect(self.DATABASE)
         round = self.round
         if self.round == 0:
             return True
-        now_matches = con.execute("SELECT * FROM game_result WHERE round = ?", [round]).fetchall()
+        now_matches = self.game_result_model.now_games(round)
         res = True
         cnt = 0
         for row in now_matches:
@@ -151,24 +143,20 @@ class GameManager():
 
         if cnt == 0:
             res = False
-        con.close()
         return res
     
     def matching(self):
         if self.is_game_end():
             self.update_grades()
         else:
-            con = sqlite3.connect(self.DATABASE)
-            con.execute('DELETE FROM game_result WHERE round = ?', [self.round])
-            con.commit()
-            con.close()
-
+            self.game_result_model.delete_now_games(self.round)
 
         # DBからデータを持ってきて保存
         players = []
         no_players = []
         con = sqlite3.connect(self.DATABASE)
         ranks_data = con.execute('SELECT results.name, results.win, results.lose, results.stone_diff, players.status FROM results JOIN players ON results.name = players.name').fetchall()
+        con.close()
         for row in ranks_data:
             name, win, lose, stone_diff, status = row
             if status == "参加":
@@ -189,11 +177,10 @@ class GameManager():
             for j in range(0, len(players)):
                 if players[i]['name'] == players[j]['name']:
                     continue
-                befo_game = con.execute("SELECT * FROM game_result WHERE (win_player=? AND lose_player=?) OR (win_player=? AND lose_player=?)", [players[i]['name'], players[j]['name'], players[j]['name'], players[i]['name']]).fetchall()
+                befo_game = self.game_result_model.get_game(players[i]['name'], players[j]['name'])
                 if len(befo_game) != 0:
                     already_battle[i][j] = 1
                     already_battle[j][i] = 1
-        con.close()
         pairs = self.matcher.concider_match(players_id, already_battle)
 
         round = self.round
@@ -210,27 +197,20 @@ class GameManager():
                 continue
             self.now_match_model.add(player1, player2, "PLAYING")
 
-        if (no_game_player != -1):
+        if no_game_player != -1:
             player1 = players[no_game_player]['name']
-            con = sqlite3.connect(self.DATABASE)
-            con.execute('INSERT INTO game_result VALUES (?, ?, ?, ?)', [round, player1, "不戦勝", 2])
-            con.commit()
-            con.close()
+            self.game_result_model.add(round, player1, "不戦勝", 2)
             self.now_match_model.add(player1, "-", "不戦勝")            
 
         for name in no_players:
-            con = sqlite3.connect(self.DATABASE)
-            con.execute('INSERT INTO game_result VALUES (?, ?, ?, ?)', [round, "不戦敗", name, 64])
-            con.commit()
-            con.close()
+            self.game_result_model.add(round, "不戦敗", name, 64)
             self.now_match_model.add(player1, "-", "不戦敗")
         
         
         
     def fix_prev_game(self, win_name, round, stone_diff):
         lose_name = "?"
-        con = sqlite3.connect(self.DATABASE)
-        game_data = con.execute('SELECT * FROM game_result WHERE (win_player = ? OR lose_player = ?) AND round = ?', [win_name, win_name, round]).fetchall()
+        game_data = self.game_result_model.get_now_game(round, win_name)
         for row in game_data:
             if row[1]==win_name:
                 lose_name=row[2]
@@ -238,61 +218,47 @@ class GameManager():
                 lose_name=row[1]
     
         # 訂正時
-        data = con.execute('SELECT * FROM game_result WHERE (win_player = ? AND lose_player=?) OR (win_player = ? AND lose_player=?)', [win_name, lose_name, lose_name, win_name]).fetchall()
+        data = self.game_result_model.get_game(win_name, lose_name)
         if len(data) == 1:
           prev_win = data[0][1]
           prev_lose = data[0][2]
           prev_stone_diff = data[0][3]
-          con.execute('DELETE FROM game_result WHERE win_player = ? AND lose_player=?', [prev_win, prev_lose])
-          con.commit()
-          con.close()
+          self.game_result_model.delete_game(prev_win, prev_lose)
           if round != self.round:
               self.result_model.fix_data(prev_win, True, prev_stone_diff)
               self.result_model.fix_data(prev_lose, False, prev_stone_diff)
-        con = sqlite3.connect(self.DATABASE)
-        con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [round, win_name, lose_name, stone_diff])
-        con.commit()
-        con.close()
+        self.game_result_model.add(round, win_name, lose_name, stone_diff)
         if round != self.round:
             self.result_model.update_data(win_name, True, stone_diff)
             self.result_model.update_data(lose_name, False, stone_diff)
         
 
     def fix_no_game(self, player, kind, stone_diff):
-        con = sqlite3.connect(self.DATABASE)
-        con.execute('DELETE FROM game_result WHERE round = ? AND (win_player = ? OR lose_player = ?)', [self.round, player, player]).fetchall()
+        self.game_result_model.delete_now_game(self.round, player)
         self.now_match_model.delete(player)
     
         if kind == "不戦勝":
-            con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [self.round, player, "不戦勝", stone_diff])
+            self.game_result_model.add(self.round, player, "不戦勝", stone_diff)
             self.now_match_model.add(player, "-", "不戦勝")
         else:
-            con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [self.round, "不戦敗", player, stone_diff])
+            self.game_result_model.add(self.round, "不戦敗", player, stone_diff)
             self.now_match_model.add(player, "-", "不戦敗")
-        
-        con.commit()
-        con.close()
 
     def get_game_result(self, player1, player2):
-        con = sqlite3.connect(self.DATABASE)
-        data = con.execute('SELECT * FROM game_result WHERE (win_player = ? AND lose_player=?) OR (win_player=? AND lose_player=?)', [player1, player2, player2, player1]).fetchall()
+        data = self.game_result_model.get_game(player1, player2)
         round = data[0][0]
         prev_win = data[0][1]
         prev_lose = data[0][2]
         stone_diff = data[0][3]
-        con.close()
+
         return round, {'winner': prev_win, 'loser': prev_lose, 'stone_diff': stone_diff}
 
     def delete_match(self, name1, name2):
-        data = con.execute('SELECT * FROM game_result WHERE (win_player = ? AND lose_player=?) OR (win_player = ? AND lose_player=?)', [name1, name2, name2, name1]).fetchall()
+        data = self.game_result_model.get_game(name1, name2)
         if len(data) == 1:
             prev_win = data[0][1]
             prev_lose = data[0][2]
-            prev_stone_diff = data[0][3]
-            con = sqlite3.connect(self.DATABASE)
-            con.execute('DELETE FROM game_result WHERE win_player = ? AND lose_player=?', [prev_win, prev_lose])
-            con.commit()
-            con.close()
+            self.game_result_model.delete_game(prev_win, prev_lose)
             self.now_match_model.reset_match(name1, name2)
 
     def get_status(self, name):
@@ -314,7 +280,6 @@ class GameManager():
     def outcsv(self):
         datas = []
         players = []
-        con = sqlite3.connect(self.DATABASE)
         ranks_data = self.result_model.all()
         for row in ranks_data:
             players.append(row)
@@ -325,7 +290,7 @@ class GameManager():
             name = player['name']
             player_info = self.player_model.get_player_data(name)
             result_info = self.result_model.person_data(name)
-            battle_info = con.execute('SELECT * FROM game_result WHERE win_player=? OR lose_player=?', [name, name]).fetchall()
+            battle_info = self.game_result_model.person_game_result(name)
             battle = []
             battles = []
             for row in battle_info:
@@ -356,7 +321,6 @@ class GameManager():
 
             datas.append({'name': player['name'], 'short': player_info['short'], 'block':player_info['block'], 'grade': player_info['grade'], 'win': result_info['win'], 'lose': result_info['lose'], 'stone_diff': result_info['stone_diff'], 'battle': battle })
     
-        con.close()
         with open('result.csv', 'w', newline="") as f:
             writer = csv.writer(f)
             prev_win = 100
@@ -397,9 +361,8 @@ class GameManager():
         
 
     def game_input(self, win_name, stone_diff):
-        round_int = 10
         lose_name = "?"
-        round_int = self.round
+        round = self.round
         game_data = self.now_match_model.get_data(win_name)
         for row in game_data:
             if row[0]==win_name:
@@ -407,17 +370,14 @@ class GameManager():
             else:
                 lose_name=row[0]
         # 訂正時
-        con = sqlite3.connect(self.DATABASE)
-        data = con.execute('SELECT * FROM game_result WHERE (win_player = ? AND lose_player=?) OR (win_player = ? AND lose_player=?)', [win_name, lose_name, lose_name, win_name]).fetchall()
+        data = self.game_result_model.get_game(win_name, lose_name)
         if len(data) == 1:
             prev_win = data[0][1]
             prev_lose = data[0][2]
             prev_stone_diff = data[0][3]
-            con.execute('DELETE FROM game_result WHERE win_player = ? AND lose_player=?', [prev_win, prev_lose])
+            self.game_result_model.delete_game(self, prev_win, lose_name)
 
-        con.execute('INSERT INTO game_result VALUES(?, ?, ?, ?)', [round_int, win_name, lose_name, stone_diff])
-        con.commit()
-        con.close()
+        self.game_result_model.add(round, win_name, lose_name, stone_diff)
         self.now_match_model.set_winner(win_name)
 
     def swap_matches(self, names):

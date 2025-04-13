@@ -77,8 +77,3 @@ class NowMatchModel():
         game_data = con.execute('SELECT * FROM now_matches WHERE player1=? OR player2=?', [name, name]).fetchall()
         con.close()
         return game_data
-
-
-
-
-
